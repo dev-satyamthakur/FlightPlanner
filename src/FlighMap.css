@@ -16,3 +16,27 @@
   .plane-icon.east-to-west img {
     transform: rotate(var(--rotation-angle, 0deg)) scaleX(-1);
   }
+
+  /* FlighMap.css */
+.plane-icon {
+  transition: transform 0.3s ease;
+}
+
+.map-disclaimer {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 1000;
+  border: 1px solid #ccc;
+}
+
+/* Add custom style for the Bhuvan attribution */
+.leaflet-control-attribution {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  padding: 2px 5px !important;
+  font-size: 11px !important;
+}
