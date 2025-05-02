@@ -17,17 +17,10 @@ const createPlaneIcon = (direction) => {
   });
 };
 
-const FlightMap = () => {
-  // Define coordinates - [longitude, latitude]
-  const newDelhi = [77.1025, 28.5562];
-  const singapore = [103.9894, 1.3644];
-  const start = turf.point(newDelhi);
-  const end = turf.point(singapore);
-
-  //   const california = [-118.4085, 33.9416]; // [longitude, latitude]
-  //   const indonesia = [106.6559, -6.1256]; // [longitude, latitude]
-  //   const start = turf.point(california);
-  //   const end = turf.point(indonesia);
+const FlightMap = ({ source, destination }) => {
+  // Create points from source and destination coordinates
+  const start = turf.point([source[1], source[0]]); // [lon, lat]
+  const end = turf.point([destination[1], destination[0]]); // [lon, lat]
 
   // Determine overall flight direction
   const isWestToEast =
@@ -84,10 +77,16 @@ const FlightMap = () => {
     };
   }, [path.length, isPaused]);
 
+  // Calculate center point for the map
+  const center = [
+    (source[0] + destination[0]) / 2,
+    (source[1] + destination[1]) / 2,
+  ];
+
   return (
     <div style={{ width: "100%", height: "100vh" }}>
       <MapContainer
-        center={[40, 20]}
+        center={center}
         zoom={3}
         style={{ height: "100%", width: "100%" }}
       >
