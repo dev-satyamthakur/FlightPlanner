@@ -50,33 +50,75 @@ const SunPositionFlightMap = ({
     const timeAtPoint = new Date(
       departureTime.getTime() + (index * (flightDuration * 60000)) / npoints
     );
-    return getSunPositionAtPoint(point, timeAtPoint);
+    return {
+      position: getSunPositionAtPoint(point, timeAtPoint),
+      time: timeAtPoint,
+      location: point,
+    };
   });
 
   // Determine which side of the aircraft will have better views
   const determineBestSeat = () => {
-    let sunOnLeft = 0;
-    let sunOnRight = 0;
+    let sunriseViews = { left: 0, right: 0 };
+    let sunsetViews = { left: 0, right: 0 };
+    let totalViews = 0;
 
-    sunPositions.forEach((pos, i) => {
-      // Convert azimuth to degrees (0-360)
-      let azimuth = ((pos.azimuth * 180) / Math.PI + 180) % 360;
+    sunPositions.forEach((data, i) => {
+      const pos = data.position;
+      const time = data.time;
+      const location = data.location;
 
-      // Calculate relative angle to aircraft heading
-      const heading = isWestToEast ? 90 : 270;
-      const relativeAngle = (azimuth - heading + 360) % 360;
+      // Convert altitude to degrees
+      const altitudeDeg = (pos.altitude * 180) / Math.PI;
 
-      // Count which side the sun appears more
-      if (relativeAngle > 0 && relativeAngle < 180) {
-        sunOnRight++;
-      } else {
-        sunOnLeft++;
+      // Only consider when sun is near horizon (-6° to 6° for civil twilight)
+      if (Math.abs(altitudeDeg) <= 6) {
+        // Get sun times for this location
+        const times = SunCalc.getTimes(time, location[0], location[1]);
+
+        // Convert azimuth to degrees (0-360)
+        let azimuth = ((pos.azimuth * 180) / Math.PI + 180) % 360;
+
+        // Calculate relative angle to aircraft heading
+        const heading = isWestToEast ? 90 : 270;
+        const relativeAngle = (azimuth - heading + 360) % 360;
+
+        // Determine if it's sunrise or sunset period
+        const isSunrise = time > times.sunrise && time < times.solarNoon;
+        const isSunset = time > times.solarNoon && time < times.sunset;
+
+        if (relativeAngle > 0 && relativeAngle < 180) {
+          if (isSunrise) sunriseViews.right++;
+          if (isSunset) sunsetViews.right++;
+        } else {
+          if (isSunrise) sunriseViews.left++;
+          if (isSunset) sunsetViews.left++;
+        }
+        totalViews++;
       }
     });
 
+    // Calculate overall recommendation
+    const totalLeft = sunriseViews.left + sunsetViews.left;
+    const totalRight = sunriseViews.right + sunsetViews.right;
+
+    // Prevent division by zero
+    const confidence =
+      totalViews > 0 ? Math.abs(totalLeft - totalRight) / totalViews : 0;
+
     return {
-      recommendedSide: sunOnLeft > sunOnRight ? "left" : "right",
-      confidence: Math.abs(sunOnLeft - sunOnRight) / (sunOnLeft + sunOnRight),
+      recommendedSide: totalLeft > totalRight ? "left" : "right",
+      confidence: confidence,
+      details: {
+        sunrise: {
+          left: sunriseViews.left,
+          right: sunriseViews.right,
+        },
+        sunset: {
+          left: sunsetViews.left,
+          right: sunsetViews.right,
+        },
+      },
     };
   };
 
@@ -132,12 +174,32 @@ const SunPositionFlightMap = ({
     <div>
       <div className="seat-recommendation">
         <h3>Seat Recommendation</h3>
-        <p>
-          For the best views of sunrise/sunset, choose a seat on the{" "}
-          <strong>{seatRecommendation.recommendedSide}</strong> side of the
-          aircraft.
-        </p>
-        <p>Confidence: {Math.round(seatRecommendation.confidence * 100)}%</p>
+        {seatRecommendation.confidence > 0 ? (
+          <>
+            <p>
+              For the best views of sunrise/sunset, choose a seat on the{" "}
+              <strong>{seatRecommendation.recommendedSide}</strong> side of the
+              aircraft.
+            </p>
+            <p>
+              Confidence: {Math.round(seatRecommendation.confidence * 100)}%
+            </p>
+            <div className="view-details">
+              <p>
+                <strong>Sunrise Views:</strong>
+                Left: {seatRecommendation.details.sunrise.left}, Right:{" "}
+                {seatRecommendation.details.sunrise.right}
+              </p>
+              <p>
+                <strong>Sunset Views:</strong>
+                Left: {seatRecommendation.details.sunset.left}, Right:{" "}
+                {seatRecommendation.details.sunset.right}
+              </p>
+            </div>
+          </>
+        ) : (
+          <p>No sunrise or sunset views are expected during this flight.</p>
+        )}
       </div>
       <div style={{ width: "100%", height: "100vh" }}>
         <MapContainer
