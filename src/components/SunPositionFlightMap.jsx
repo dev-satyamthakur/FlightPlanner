@@ -171,60 +171,41 @@ const SunPositionFlightMap = ({
   ];
 
   return (
-    <div>
-      <div className="seat-recommendation">
-        <h3>Seat Recommendation</h3>
-        {seatRecommendation.confidence > 0 ? (
-          <>
-            <p>
-              For the best views of sunrise/sunset, choose a seat on the{" "}
-              <strong>{seatRecommendation.recommendedSide}</strong> side of the
-              aircraft.
-            </p>
-            <p>
-              Confidence: {Math.round(seatRecommendation.confidence * 100)}%
-            </p>
-            <div className="view-details">
-              <p>
-                <strong>Sunrise Views:</strong>
-                Left: {seatRecommendation.details.sunrise.left}, Right:{" "}
-                {seatRecommendation.details.sunrise.right}
-              </p>
-              <p>
-                <strong>Sunset Views:</strong>
-                Left: {seatRecommendation.details.sunset.left}, Right:{" "}
-                {seatRecommendation.details.sunset.right}
-              </p>
-            </div>
-          </>
-        ) : (
-          <p>No sunrise or sunset views are expected during this flight.</p>
-        )}
-      </div>
-      <div style={{ width: "100%", height: "100vh" }}>
-        <MapContainer
-          center={center}
-          zoom={3}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer
-            attribution="© Google"
-            url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-          />
-          <Polyline
-            positions={path}
-            pathOptions={{
-              color: "blue",
-              weight: 3,
-              dashArray: "8 12",
-            }}
-          />
-          <Marker
-            position={path[planeIndex]}
-            icon={createPlaneIcon(flightDirection)}
-          />
-        </MapContainer>
-      </div>
+    <div className="relative h-full w-full">
+      <MapContainer center={center} zoom={3} className="h-full w-full">
+        <TileLayer
+          attribution="© Google"
+          url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+        />
+        <Polyline
+          positions={path}
+          pathOptions={{
+            color: "blue",
+            weight: 3,
+            dashArray: "8 12",
+          }}
+        />
+        <Marker
+          position={path[planeIndex]}
+          icon={createPlaneIcon(flightDirection)}
+        />
+      </MapContainer>
+
+      {/* Move seat recommendation to the right panel */}
+      {seatRecommendation.confidence > 0 && (
+        <div className="absolute top-4 right-4 z-[1000] bg-white p-4 rounded-lg shadow-lg max-w-sm">
+          <p className="text-sm font-medium text-gray-900">
+            Best seat:{" "}
+            <span className="font-bold">
+              {seatRecommendation.recommendedSide}
+            </span>{" "}
+            side
+          </p>
+          <p className="text-xs text-gray-600">
+            Confidence: {Math.round(seatRecommendation.confidence * 100)}%
+          </p>
+        </div>
+      )}
     </div>
   );
 };
