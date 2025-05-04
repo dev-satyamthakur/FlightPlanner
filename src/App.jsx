@@ -1,7 +1,11 @@
 import "./App.css";
 import SunPositionFlightMap from "./components/SunPositionFlightMap";
 import AirportSearchInput from "./components/AirportSearchInput";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import {
+  calculateSunViewingWindows,
+  getLocationName,
+} from "./utils/sunTimingCalculator";
 
 export default function App() {
   const [source, setSource] = useState(null);
@@ -9,6 +13,11 @@ export default function App() {
   const [departureTime, setDepartureTime] = useState("");
   const [flightHours, setFlightHours] = useState("");
   const [flightMinutes, setFlightMinutes] = useState("");
+  const [viewingWindows, setViewingWindows] = useState(null);
+  const [locationNames, setLocationNames] = useState({
+    sunrise: { start: null, end: null },
+    sunset: { start: null, end: null },
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -25,6 +34,51 @@ export default function App() {
 
   const totalFlightDuration =
     parseInt(flightHours || "0") * 60 + parseInt(flightMinutes || "0");
+
+  useEffect(() => {
+    if (source && destination && departureTime && totalFlightDuration > 0) {
+      const windows = calculateSunViewingWindows(
+        [source.lat, source.lon],
+        [destination.lat, destination.lon],
+        new Date(departureTime),
+        totalFlightDuration
+      );
+      setViewingWindows(windows);
+
+      const fetchLocationNames = async () => {
+        const names = {
+          sunrise: { start: null, end: null },
+          sunset: { start: null, end: null },
+        };
+
+        if (windows.sunrise.start) {
+          names.sunrise.start = await getLocationName(
+            windows.sunrise.start.position.lat,
+            windows.sunrise.start.position.lon
+          );
+          names.sunrise.end = await getLocationName(
+            windows.sunrise.end.position.lat,
+            windows.sunrise.end.position.lon
+          );
+        }
+
+        if (windows.sunset.start) {
+          names.sunset.start = await getLocationName(
+            windows.sunset.start.position.lat,
+            windows.sunset.start.position.lon
+          );
+          names.sunset.end = await getLocationName(
+            windows.sunset.end.position.lat,
+            windows.sunset.end.position.lon
+          );
+        }
+
+        setLocationNames(names);
+      };
+
+      fetchLocationNames();
+    }
+  }, [source, destination, departureTime, totalFlightDuration]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
@@ -142,15 +196,96 @@ export default function App() {
         <h2 className="text-2xl font-bold mb-6">Flight Tips</h2>
         <div className="space-y-6">
           <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-xl font-semibold mb-4">Seat Recommendation</h3>
+            <h3 className="text-xl font-semibold mb-4">
+              Viewing Opportunities
+            </h3>
             {source &&
             destination &&
             departureTime &&
             totalFlightDuration > 0 ? (
-              <div className="seat-recommendation-content" />
+              <div className="space-y-4">
+                {viewingWindows ? (
+                  <>
+                    {viewingWindows.sunrise.start && (
+                      <div className="bg-orange-50 p-3 rounded-lg">
+                        <h4 className="text-lg font-medium text-orange-700 mb-2">
+                          Sunrise Viewing Window
+                        </h4>
+                        <div className="space-y-2 text-sm">
+                          <p>
+                            <span className="font-medium">Starts:</span>{" "}
+                            {viewingWindows.sunrise.start.time}
+                            {locationNames.sunrise.start && (
+                              <span className="block text-orange-600 text-xs">
+                                Near {locationNames.sunrise.start}
+                              </span>
+                            )}
+                          </p>
+                          <p>
+                            <span className="font-medium">Ends:</span>{" "}
+                            {viewingWindows.sunrise.end.time}
+                            {locationNames.sunrise.end && (
+                              <span className="block text-orange-600 text-xs">
+                                Near {locationNames.sunrise.end}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {viewingWindows.sunset.start && (
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <h4 className="text-lg font-medium text-blue-700 mb-2">
+                          Sunset Viewing Window
+                        </h4>
+                        <div className="space-y-2 text-sm">
+                          <p>
+                            <span className="font-medium">Starts:</span>{" "}
+                            {viewingWindows.sunset.start.time}
+                            {locationNames.sunset.start && (
+                              <span className="block text-blue-600 text-xs">
+                                Near {locationNames.sunset.start}
+                              </span>
+                            )}
+                          </p>
+                          <p>
+                            <span className="font-medium">Ends:</span>{" "}
+                            {viewingWindows.sunset.end.time}
+                            {locationNames.sunset.end && (
+                              <span className="block text-blue-600 text-xs">
+                                Near {locationNames.sunset.end}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {!viewingWindows.sunrise.start &&
+                      !viewingWindows.sunset.start && (
+                        <p className="text-gray-500 italic">
+                          No sunrise or sunset viewing opportunities during this
+                          flight.
+                        </p>
+                      )}
+                  </>
+                ) : (
+                  <div className="flex justify-center items-center h-24">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
+                )}
+
+                <div className="mt-4 text-xs text-gray-500">
+                  <p>* Times are shown in your local timezone</p>
+                  <p>
+                    * Viewing windows are calculated for civil twilight periods
+                  </p>
+                </div>
+              </div>
             ) : (
               <p className="text-gray-500">
-                Enter flight details to get seat recommendations
+                Enter flight details to get viewing opportunities
               </p>
             )}
           </div>
