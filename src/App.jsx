@@ -7,16 +7,26 @@ export default function App() {
   const [source, setSource] = useState(null);
   const [destination, setDestination] = useState(null);
   const [departureTime, setDepartureTime] = useState("");
-  const [flightDuration, setFlightDuration] = useState("");
+  const [flightHours, setFlightHours] = useState("");
+  const [flightMinutes, setFlightMinutes] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
     // Validate inputs
-    if (!source || !destination || !departureTime || !flightDuration) {
+    if (
+      !source ||
+      !destination ||
+      !departureTime ||
+      (!flightHours && !flightMinutes)
+    ) {
       alert("Please fill in all fields");
       return;
     }
   };
+
+  // Calculate total minutes for the SunPositionFlightMap
+  const totalFlightDuration =
+    parseInt(flightHours || "0") * 60 + parseInt(flightMinutes || "0");
 
   return (
     <div style={{ padding: "20px" }}>
@@ -45,20 +55,34 @@ export default function App() {
             </label>
           </div>
           <div style={{ marginTop: "20px" }}>
-            <label>
-              Flight Duration (minutes):
-              <input
-                type="number"
-                value={flightDuration}
-                onChange={(e) => setFlightDuration(e.target.value)}
-                min="1"
-                style={{ marginLeft: "10px" }}
-              />
-            </label>
+            <label>Flight Duration:</label>
+            <div style={{ display: "flex", gap: "10px", marginTop: "5px" }}>
+              <div>
+                <input
+                  type="number"
+                  value={flightHours}
+                  onChange={(e) => setFlightHours(e.target.value)}
+                  min="0"
+                  style={{ width: "80px" }}
+                />
+                <span style={{ marginLeft: "5px" }}>hours</span>
+              </div>
+              <div>
+                <input
+                  type="number"
+                  value={flightMinutes}
+                  onChange={(e) => setFlightMinutes(e.target.value)}
+                  min="0"
+                  max="59"
+                  style={{ width: "80px" }}
+                />
+                <span style={{ marginLeft: "5px" }}>minutes</span>
+              </div>
+            </div>
           </div>
         </form>
 
-        {source && destination && departureTime && flightDuration && (
+        {source && destination && departureTime && totalFlightDuration > 0 && (
           <div style={{ marginTop: "20px" }}>
             <h3>Selected Flight Details:</h3>
             <div style={{ marginBottom: "10px" }}>
@@ -74,19 +98,20 @@ export default function App() {
             <div>
               <b>Departure:</b> {new Date(departureTime).toLocaleString()}
               <br />
-              <b>Duration:</b> {flightDuration} minutes
+              <b>Duration:</b> {flightHours ? `${flightHours} hours ` : ""}
+              {flightMinutes ? `${flightMinutes} minutes` : ""}
             </div>
           </div>
         )}
       </div>
 
-      {source && destination && departureTime && flightDuration && (
+      {source && destination && departureTime && totalFlightDuration > 0 && (
         <div style={{ marginTop: "20px" }}>
           <SunPositionFlightMap
             source={[source.lat, source.lon]}
             destination={[destination.lat, destination.lon]}
             departureTime={new Date(departureTime)}
-            flightDuration={parseInt(flightDuration)}
+            flightDuration={totalFlightDuration}
           />
         </div>
       )}
