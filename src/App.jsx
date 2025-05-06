@@ -179,8 +179,16 @@ export default function App() {
         {source && destination && departureTime && totalFlightDuration > 0 ? (
           <div className="absolute inset-0">
             <GlobeApp
-              pointA={{ lat: source.lat, lon: source.lon }}
-              pointB={{ lat: destination.lat, lon: destination.lon }}
+              pointA={{ 
+                lat: source.lat, 
+                lon: source.lon,
+                name: source.name || `${source.lat.toFixed(2)}, ${source.lon.toFixed(2)}`
+              }}
+              pointB={{ 
+                lat: destination.lat, 
+                lon: destination.lon,
+                name: destination.name || `${destination.lat.toFixed(2)}, ${destination.lon.toFixed(2)}`
+              }}
             />
           </div>
         ) : (

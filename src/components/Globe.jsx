@@ -168,8 +168,16 @@ function Globe({ pointA, pointB }) {
   });
 
   const cities = [
-    { name: "New York", lat: 40.7128, lon: -74.006 },
-    { name: "Delhi", lat: 28.6448, lon: 77.216721 },
+    { 
+      name: pointA.name, 
+      lat: pointA.lat, 
+      lon: pointA.lon 
+    },
+    { 
+      name: pointB.name, 
+      lat: pointB.lat, 
+      lon: pointB.lon 
+    }
   ];
 
   return (
