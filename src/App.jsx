@@ -6,6 +6,7 @@ import {
   calculateSunViewingWindows,
   getLocationName,
 } from "./utils/sunTimingCalculator";
+import GlobeApp from "./components/Globe";
 
 export default function App() {
   const [source, setSource] = useState(null);
@@ -173,19 +174,19 @@ export default function App() {
         )}
       </div>
 
-      {/* Middle Panel - Map (6/12 = 50%) */}
-      <div className="w-6/12 h-full">
+      {/* Middle Panel - Globe (6/12 = 50%) */}
+      <div className="w-6/12 h-full relative">
         {source && destination && departureTime && totalFlightDuration > 0 ? (
-          <SunPositionFlightMap
-            source={[source.lat, source.lon]}
-            destination={[destination.lat, destination.lon]}
-            departureTime={new Date(departureTime)}
-            flightDuration={totalFlightDuration}
-          />
+          <div className="absolute inset-0">
+            <GlobeApp
+              pointA={{ lat: source.lat, lon: source.lon }}
+              pointB={{ lat: destination.lat, lon: destination.lon }}
+            />
+          </div>
         ) : (
           <div className="h-full flex items-center justify-center bg-gray-100">
             <p className="text-gray-500 text-lg">
-              Enter flight details to view the map
+              Enter flight details to view the globe
             </p>
           </div>
         )}
