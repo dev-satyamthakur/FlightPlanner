@@ -7,6 +7,31 @@ import {
   getLocationName,
 } from "./utils/sunTimingCalculator";
 import GlobeApp from "./components/Globe";
+import { bearing } from '@turf/turf';
+
+const getSeatRecommendation = (sourceLat, sourceLon, destLat, destLon, hasSunrise, hasSunset) => {
+  // Calculate initial bearing of flight path
+  const flightBearing = bearing([sourceLon, sourceLat], [destLon, destLat]);
+  
+  // Normalize bearing to 0-360
+  const normalizedBearing = (flightBearing + 360) % 360;
+  
+  let recommendation = {
+    sunrise: '',
+    sunset: ''
+  };
+
+  // For sunrise (sun rises in the east)
+  if (normalizedBearing >= 0 && normalizedBearing < 180) {
+    recommendation.sunrise = 'left (port)';
+    recommendation.sunset = 'right (starboard)';
+  } else {
+    recommendation.sunrise = 'right (starboard)';
+    recommendation.sunset = 'left (port)';
+  }
+
+  return recommendation;
+};
 
 export default function App() {
   const [source, setSource] = useState(null);
@@ -169,6 +194,7 @@ export default function App() {
                   {flightMinutes ? `${flightMinutes} minutes` : ""}
                 </p>
               </div>
+              
             </div>
           </div>
         )}
@@ -176,28 +202,20 @@ export default function App() {
 
       {/* Middle Panel - Globe (6/12 = 50%) */}
       <div className="w-6/12 h-full relative">
-        {source && destination && departureTime && totalFlightDuration > 0 ? (
-          <div className="absolute inset-0">
-            <GlobeApp
-              pointA={{ 
-                lat: source.lat, 
-                lon: source.lon,
-                name: source.name || `${source.lat.toFixed(2)}, ${source.lon.toFixed(2)}`
-              }}
-              pointB={{ 
-                lat: destination.lat, 
-                lon: destination.lon,
-                name: destination.name || `${destination.lat.toFixed(2)}, ${destination.lon.toFixed(2)}`
-              }}
-            />
-          </div>
-        ) : (
-          <div className="h-full flex items-center justify-center bg-gray-100">
-            <p className="text-gray-500 text-lg">
-              Enter flight details to view the globe
-            </p>
-          </div>
-        )}
+        <div className="absolute inset-0">
+          <GlobeApp
+            pointA={source && { 
+              lat: source.lat, 
+              lon: source.lon,
+              name: source.name || `${source.lat.toFixed(2)}, ${source.lon.toFixed(2)}`
+            }}
+            pointB={destination && { 
+              lat: destination.lat, 
+              lon: destination.lon,
+              name: destination.name || `${destination.lat.toFixed(2)}, ${destination.lon.toFixed(2)}`
+            }}
+          />
+        </div>
       </div>
 
       {/* Right Panel - Tips and Recommendations (3/12 = 25%) */}
@@ -208,6 +226,37 @@ export default function App() {
             <h3 className="text-xl font-semibold mb-4">
               Viewing Opportunities
             </h3>
+
+            {viewingWindows && (
+                <div className="mb-4">
+                  <p className="font-medium">Seat Recommendations</p>
+                  {(() => {
+                    const recommendation = getSeatRecommendation(
+                      source.lat,
+                      source.lon,
+                      destination.lat,
+                      destination.lon,
+                      !!viewingWindows.sunrise.start,
+                      !!viewingWindows.sunset.start
+                    );
+                    return (
+                      <div className="text-sm">
+                        {viewingWindows.sunrise.start && (
+                          <p className="text-orange-600">
+                            For sunrise views, choose a {recommendation.sunrise} side window seat
+                          </p>
+                        )}
+                        {viewingWindows.sunset.start && (
+                          <p className="text-blue-600">
+                            For sunset views, choose a {recommendation.sunset} side window seat
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
             {source &&
             destination &&
             departureTime &&

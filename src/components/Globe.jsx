@@ -114,31 +114,37 @@ function Globe({ pointA, pointB }) {
   const { camera } = useThree();
 
   useEffect(() => {
-    const radius = 1;
-    const startVec = latLonToVector3(pointA.lat, pointA.lon, radius);
-    const endVec = latLonToVector3(pointB.lat, pointB.lon, radius);
-    const greatCircle = new GreatCircleCurve(startVec, endVec, radius);
-    setCurve(greatCircle);
-    setStartTime(performance.now());
+    if (pointA && pointB) {
+      const radius = 1;
+      const startVec = latLonToVector3(pointA.lat, pointA.lon, radius);
+      const endVec = latLonToVector3(pointB.lat, pointB.lon, radius);
+      const greatCircle = new GreatCircleCurve(startVec, endVec, radius);
+      setCurve(greatCircle);
+      setStartTime(performance.now());
 
-    const points = greatCircle.getPoints(150);
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const tubeGeometry = new THREE.TubeGeometry(
-      greatCircle,
-      150,
-      0.008,
-      8,
-      false
-    );
-    const material = new THREE.MeshStandardMaterial({
-      color: "#FFD700",
-      emissive: "#FF8C00",
-      emissiveIntensity: 0.5,
-      metalness: 0.7,
-      roughness: 0.3,
-    });
-    const tube = new THREE.Mesh(tubeGeometry, material);
-    setFlightPath(tube);
+      const points = greatCircle.getPoints(150);
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const tubeGeometry = new THREE.TubeGeometry(
+        greatCircle,
+        150,
+        0.008,
+        8,
+        false
+      );
+      const material = new THREE.MeshStandardMaterial({
+        color: "#FFD700",
+        emissive: "#FF8C00",
+        emissiveIntensity: 0.5,
+        metalness: 0.7,
+        roughness: 0.3,
+      });
+      const tube = new THREE.Mesh(tubeGeometry, material);
+      setFlightPath(tube);
+    } else {
+      setCurve(null);
+      setStartTime(null);
+      setFlightPath(null);
+    }
   }, [pointA, pointB]);
 
   useFrame(({ clock }) => {
@@ -154,7 +160,7 @@ function Globe({ pointA, pointB }) {
     }
 
     if (curve && planeRef.current && startTime) {
-      const duration = 30000; // 30 seconds journey
+      const duration = 30000;
       const elapsed = (performance.now() - startTime) % duration;
       const t = elapsed / duration;
       const position = curve.getPoint(t);
@@ -167,18 +173,9 @@ function Globe({ pointA, pointB }) {
     }
   });
 
-  const cities = [
-    { 
-      name: pointA.name, 
-      lat: pointA.lat, 
-      lon: pointA.lon 
-    },
-    { 
-      name: pointB.name, 
-      lat: pointB.lat, 
-      lon: pointB.lon 
-    }
-  ];
+  const cities = [];
+  if (pointA) cities.push({ name: pointA.name, lat: pointA.lat, lon: pointA.lon });
+  if (pointB) cities.push({ name: pointB.name, lat: pointB.lat, lon: pointB.lon });
 
   return (
     <>
@@ -192,15 +189,17 @@ function Globe({ pointA, pointB }) {
 
       <group ref={pathGroupRef}>
         {flightPath && <primitive object={flightPath} />}
-
-        <mesh ref={planeRef}>
-          <coneGeometry args={[0.015, 0.06, 3]} />
-          <meshStandardMaterial
-            color="#3399FF"
-            emissive="#0066CC"
-            emissiveIntensity={0.5}
-          />
-        </mesh>
+        
+        {curve && planeRef && (
+          <mesh ref={planeRef}>
+            <coneGeometry args={[0.015, 0.06, 3]} />
+            <meshStandardMaterial
+              color="#3399FF"
+              emissive="#0066CC"
+              emissiveIntensity={0.5}
+            />
+          </mesh>
+        )}
 
         {cities.map((city) => {
           const position = latLonToVector3(city.lat, city.lon, 1.02);
