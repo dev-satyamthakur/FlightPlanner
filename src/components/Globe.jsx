@@ -2,6 +2,8 @@ import React, { useRef, useState, useEffect } from "react";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { OrbitControls, Text, Stars } from "@react-three/drei";
 import * as THREE from "three";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
+import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader";
 
 function latLonToVector3(lat, lon, radius) {
   const phi = (90 - lat) * (Math.PI / 180);
@@ -103,6 +105,89 @@ function CityLabel({ position, name, camera }) {
   );
 }
 
+function Airplane() {
+  // Load all textures first
+  const bodyTexture = useLoader(
+    THREE.TextureLoader,
+    "/11803_Airplane_body_diff.jpg"
+  );
+  const tailTexture = useLoader(
+    THREE.TextureLoader,
+    "/11803_Airplane_tail_diff.jpg"
+  );
+  const wingLeftTexture = useLoader(
+    THREE.TextureLoader,
+    "/11803_Airplane_wing_big_L_diff.jpg"
+  );
+  const wingRightTexture = useLoader(
+    THREE.TextureLoader,
+    "/11803_Airplane_wing_big_R_diff.jpg"
+  );
+  const wingDetailLeftTexture = useLoader(
+    THREE.TextureLoader,
+    "/11803_Airplane_wing_details_L_diff.jpg"
+  );
+  const wingDetailRightTexture = useLoader(
+    THREE.TextureLoader,
+    "/11803_Airplane_wing_details_R_diff.jpg"
+  );
+
+  // Load materials and object
+  const materials = useLoader(MTLLoader, "/11803_Airplane_v1_l1.mtl");
+  const obj = useLoader(OBJLoader, "/11803_Airplane_v1_l1.obj", (loader) => {
+    materials.preload();
+    loader.setMaterials(materials);
+  });
+
+  useEffect(() => {
+    if (obj) {
+      obj.traverse((child) => {
+        if (child.isMesh) {
+          // Apply the correct texture based on the mesh name
+          if (child.name.includes("body")) {
+            child.material.map = bodyTexture;
+          } else if (child.name.includes("tail")) {
+            child.material.map = tailTexture;
+          } else if (child.name.includes("wing_big_L")) {
+            child.material.map = wingLeftTexture;
+          } else if (child.name.includes("wing_big_R")) {
+            child.material.map = wingRightTexture;
+          } else if (child.name.includes("wing_details_L")) {
+            child.material.map = wingDetailLeftTexture;
+          } else if (child.name.includes("wing_details_R")) {
+            child.material.map = wingDetailRightTexture;
+          }
+
+          // Enhance material properties
+          child.material.metalness = 0.5;
+          child.material.roughness = 0.3;
+          child.material.emissive.set("#404040");
+          child.material.emissiveIntensity = 0.3;
+          child.material.color.set("#FFFFFF");
+          child.material.needsUpdate = true;
+        }
+      });
+    }
+  }, [
+    obj,
+    bodyTexture,
+    tailTexture,
+    wingLeftTexture,
+    wingRightTexture,
+    wingDetailLeftTexture,
+    wingDetailRightTexture,
+  ]);
+
+  return (
+    <primitive
+      object={obj}
+      scale={[0.0000625, 0.0000625, 0.0000625]}
+      rotation={[0, 0, 0]}
+      position={[0, 0, 0]}
+    />
+  );
+}
+
 function Globe({ pointA, pointB }) {
   const globeRef = useRef();
   const planeRef = useRef();
@@ -163,19 +248,51 @@ function Globe({ pointA, pointB }) {
       const duration = 30000;
       const elapsed = (performance.now() - startTime) % duration;
       const t = elapsed / duration;
+
+      // Get current position and look-ahead position
       const position = curve.getPoint(t);
       const nextT = Math.min(t + 0.01, 1);
       const nextPosition = curve.getPoint(nextT);
 
-      planeRef.current.position.copy(position).multiplyScalar(1.04);
-      planeRef.current.up.copy(position.clone().normalize());
-      planeRef.current.lookAt(nextPosition);
+      // Position the plane slightly above the path
+      planeRef.current.position.copy(position).multiplyScalar(1.02);
+
+      // Calculate the tangent (direction of movement)
+      const tangent = nextPosition.clone().sub(position).normalize();
+
+      // Calculate the normal (pointing outward from globe)
+      const normal = position.clone().normalize();
+
+      // Calculate the binormal (perpendicular to both tangent and normal)
+      const binormal = new THREE.Vector3()
+        .crossVectors(normal, tangent)
+        .normalize();
+
+      // Create rotation matrix
+      const rotationMatrix = new THREE.Matrix4().makeBasis(
+        tangent, // Forward direction (nose)
+        binormal, // Right direction (right wing)
+        normal // Up direction (top of plane)
+      );
+
+      // Apply the rotation
+      planeRef.current.quaternion.setFromRotationMatrix(rotationMatrix);
+
+      // Add banking effect during turns
+      const bankAngle = Math.PI / 24;
+      const turnRate = tangent.clone().cross(normal).length();
+      planeRef.current.rotateOnAxis(
+        tangent,
+        -bankAngle * turnRate * Math.sin(t * Math.PI * 2) * 0.3
+      );
     }
   });
 
   const cities = [];
-  if (pointA) cities.push({ name: pointA.name, lat: pointA.lat, lon: pointA.lon });
-  if (pointB) cities.push({ name: pointB.name, lat: pointB.lat, lon: pointB.lon });
+  if (pointA)
+    cities.push({ name: pointA.name, lat: pointA.lat, lon: pointA.lon });
+  if (pointB)
+    cities.push({ name: pointB.name, lat: pointB.lat, lon: pointB.lon });
 
   return (
     <>
@@ -189,16 +306,11 @@ function Globe({ pointA, pointB }) {
 
       <group ref={pathGroupRef}>
         {flightPath && <primitive object={flightPath} />}
-        
+
         {curve && planeRef && (
-          <mesh ref={planeRef}>
-            <coneGeometry args={[0.015, 0.06, 3]} />
-            <meshStandardMaterial
-              color="#3399FF"
-              emissive="#0066CC"
-              emissiveIntensity={0.5}
-            />
-          </mesh>
+          <group ref={planeRef}>
+            <Airplane />
+          </group>
         )}
 
         {cities.map((city) => {
