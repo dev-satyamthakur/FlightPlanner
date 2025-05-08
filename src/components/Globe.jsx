@@ -1,9 +1,46 @@
-import React, { useRef, useState, useEffect } from "react";
-import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import { OrbitControls, Text, Stars } from "@react-three/drei";
+import React, { useRef, useState, useEffect, Suspense } from "react";
+import {
+  Canvas,
+  useFrame,
+  useLoader,
+  useThree,
+  extend,
+} from "@react-three/fiber";
+import { OrbitControls, Text, Stars, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader";
+
+// Extend the THREE namespace to include custom loaders
+extend({ OBJLoader, MTLLoader });
+
+// Create a custom error boundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div>Something went wrong. Please try refreshing the page.</div>;
+    }
+    return this.props.children;
+  }
+}
+
+// Loading component
+function LoadingScreen() {
+  return (
+    <Html center>
+      <div>Loading...</div>
+    </Html>
+  );
+}
 
 function latLonToVector3(lat, lon, radius) {
   const phi = (90 - lat) * (Math.PI / 180);
@@ -188,7 +225,14 @@ function Airplane() {
   );
 }
 
-function Globe({ pointA, pointB }) {
+function Globe({
+  pointA,
+  pointB,
+  departureTime,
+  totalFlightTime,
+  progress,
+  onProgressChange,
+}) {
   const globeRef = useRef();
   const planeRef = useRef();
   const pathGroupRef = useRef();
@@ -245,9 +289,9 @@ function Globe({ pointA, pointB }) {
     }
 
     if (curve && planeRef.current && startTime) {
-      const duration = 30000;
+      const duration = totalFlightTime * 1000;
       const elapsed = (performance.now() - startTime) % duration;
-      const t = elapsed / duration;
+      const t = progress || elapsed / duration;
 
       // Get current position and look-ahead position
       const position = curve.getPoint(t);
@@ -309,7 +353,9 @@ function Globe({ pointA, pointB }) {
 
         {curve && planeRef && (
           <group ref={planeRef}>
-            <Airplane />
+            <Suspense fallback={null}>
+              <Airplane />
+            </Suspense>
           </group>
         )}
 
@@ -373,26 +419,73 @@ function SceneSetup() {
   );
 }
 
-export default function GlobeApp({ pointA, pointB }) {
+export default function GlobeApp({
+  pointA,
+  pointB,
+  departureTime,
+  totalFlightTime,
+}) {
+  const [progress, setProgress] = useState(0);
+
   return (
-    <div style={{ width: "100%", height: "100%", background: "black" }}>
-      <Canvas
-        camera={{ position: [0, 0, 2.5], fov: 45 }}
-        gl={{ antialias: true, alpha: true }}
-        shadows
-      >
-        <SceneSetup />
-        <Globe pointA={pointA} pointB={pointB} />
-        <OrbitControls
-          enablePan={false}
-          enableDamping
-          dampingFactor={0.05}
-          rotateSpeed={0.5}
-          zoomSpeed={0.8}
-          minDistance={1.5}
-          maxDistance={10}
-        />
-      </Canvas>
-    </div>
+    <ErrorBoundary>
+      <div style={{ width: "100%", height: "100%", position: "relative" }}>
+        {/* Progress bar outside the Canvas */}
+        <div
+          style={{
+            position: "absolute",
+            top: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "80%",
+            zIndex: 1000,
+          }}
+        >
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={progress}
+            onChange={(e) => setProgress(parseFloat(e.target.value))}
+            style={{
+              width: "100%",
+              backgroundColor: "rgba(255, 255, 255, 0.2)",
+              borderRadius: "5px",
+              padding: "5px",
+            }}
+          />
+        </div>
+
+        <div style={{ width: "100%", height: "100%", background: "black" }}>
+          <Canvas
+            camera={{ position: [0, 0, 2.5], fov: 45 }}
+            gl={{ antialias: true, alpha: true }}
+            shadows
+          >
+            <Suspense fallback={<LoadingScreen />}>
+              <SceneSetup />
+              <Globe
+                pointA={pointA}
+                pointB={pointB}
+                departureTime={departureTime}
+                totalFlightTime={totalFlightTime}
+                progress={progress}
+                onProgressChange={setProgress}
+              />
+              <OrbitControls
+                enablePan={false}
+                enableDamping
+                dampingFactor={0.05}
+                rotateSpeed={0.5}
+                zoomSpeed={0.8}
+                minDistance={1.5}
+                maxDistance={10}
+              />
+            </Suspense>
+          </Canvas>
+        </div>
+      </div>
+    </ErrorBoundary>
   );
 }
