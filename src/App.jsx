@@ -144,150 +144,225 @@ export default function App() {
   }, [source, destination, departureTime, totalFlightDuration]);
 
   return (
-    <Layout
+    <div
       style={{
         height: "100vh",
-        display: "flex",
-        flexDirection: "row",
+        width: "100vw",
+        position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Left Panel - Flight Details */}
-      <Sider
-        width={320}
-        theme="dark"
-        style={{ height: "100vh", overflow: "auto" }}
+      {/* Globe taking the full viewport */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1, // Ensure it's behind other elements
+          pointerEvents: "auto", // Ensure globe can capture pointer events
+        }}
       >
-        <div className="p-4">
-          <Title level={3} style={{ color: "white", marginBottom: "24px" }}>
-            <RocketOutlined /> Plan Your Flight
-          </Title>
+        <GlobeApp
+          pointA={
+            source && {
+              lat: source.lat,
+              lon: source.lon,
+              name:
+                source.name ||
+                `${source.lat.toFixed(2)}, ${source.lon.toFixed(2)}`,
+            }
+          }
+          pointB={
+            destination && {
+              lat: destination.lat,
+              lon: destination.lon,
+              name:
+                destination.name ||
+                `${destination.lat.toFixed(2)}, ${destination.lon.toFixed(2)}`,
+            }
+          }
+        />
+      </div>
 
-          <Form layout="vertical" onFinish={handleSubmit} className="space-y-4">
-            <Form.Item
-              label={<Text style={{ color: "white" }}>Source Airport</Text>}
-              required
-            >
-              <AirportSearchInput
-                onSelect={(airport) => setSource(airport)}
-                excludeIcao={destination?.icao}
-                formatDisplayValue={(airport) =>
-                  `${airport.city}, ${airport.state}, ${airport.country}`
-                }
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <Text style={{ color: "white" }}>Destination Airport</Text>
-              }
-              required
-            >
-              <AirportSearchInput
-                onSelect={(airport) => setDestination(airport)}
-                excludeIcao={source?.icao}
-                formatDisplayValue={(airport) =>
-                  `${airport.city}, ${airport.state}, ${airport.country}`
-                }
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <Text style={{ color: "white" }}>
-                  <CalendarOutlined /> Departure Time
-                </Text>
-              }
-              required
-            >
-              <DatePicker
-                showTime
-                onChange={(date, dateString) => setDepartureTime(dateString)}
-                style={{ width: "100%" }}
-              />
-            </Form.Item>
-
-            <Form.Item
-              label={
-                <Text style={{ color: "white" }}>
-                  <HourglassOutlined /> Flight Duration
-                </Text>
-              }
-              required
-            >
-              <Space style={{ width: "100%" }}>
-                <InputNumber
-                  min={0}
-                  value={flightHours}
-                  onChange={(value) => setFlightHours(value)}
-                  placeholder="Hours"
-                  style={{ width: "100%" }}
-                />
-                <InputNumber
-                  min={0}
-                  max={59}
-                  value={flightMinutes}
-                  onChange={(value) => setFlightMinutes(value)}
-                  placeholder="Minutes"
-                  style={{ width: "100%" }}
-                />
-              </Space>
-            </Form.Item>
-          </Form>
-
-          {source &&
-            destination &&
-            departureTime &&
-            totalFlightDuration > 0 && (
-              <FlightDetailsDisplay
-                source={source}
-                destination={destination}
-                departureTime={departureTime}
-                flightHours={flightHours}
-                flightMinutes={flightMinutes}
-              />
-            )}
-        </div>
-      </Sider>
-
-      {/* Middle Panel - Globe */}
-      <Content style={{ height: "100vh", position: "relative", flex: 1 }}>
+      {/* Overlay UI elements with glass effect */}
+      <div
+        style={{
+          position: "absolute",
+          top: "5%",
+          left: "2%",
+          right: "2%",
+          bottom: "5%",
+          zIndex: 2, // Ensure it's above the globe
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          height: "100vh", // Ensure it fits within the viewport
+          pointerEvents: "none", // Prevent overlay from capturing pointer events
+        }}
+      >
+        {/* Left Column */}
         <div
-          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+          style={{
+            width: "25%",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            height: "100%",
+            pointerEvents: "auto", // Allow interaction with these elements
+          }}
         >
-          <GlobeApp
-            pointA={
-              source && {
-                lat: source.lat,
-                lon: source.lon,
-                name:
-                  source.name ||
-                  `${source.lat.toFixed(2)}, ${source.lon.toFixed(2)}`,
-              }
-            }
-            pointB={
-              destination && {
-                lat: destination.lat,
-                lon: destination.lon,
-                name:
-                  destination.name ||
-                  `${destination.lat.toFixed(2)}, ${destination.lon.toFixed(
-                    2
-                  )}`,
-              }
-            }
-          />
-        </div>
-      </Content>
+          {/* Plan Your Flight Card */}
+          <div
+            style={{
+              backdropFilter: "blur(10px)", // Glass effect
+              backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent dark background
+              borderRadius: "15px",
+              padding: "10px",
+              // Allow it to grow and shrink
+              overflow: "hidden", // Prevent overflow
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Title level={4} style={{ color: "white", marginBottom: "16px" }}>
+              <RocketOutlined /> Plan Your Flight
+            </Title>
 
-      {/* Right Panel - Tips and Recommendations */}
-      <Sider
-        width={320}
-        theme="dark"
-        style={{ height: "100vh", overflow: "auto" }}
-      >
-        <div className="p-4">
-          <Title level={3} style={{ color: "white", marginBottom: "24px" }}>
+            <Form
+              layout="vertical"
+              onFinish={handleSubmit}
+              className="space-y-2"
+              style={{
+                flex: 1,
+                height: "100vh",
+                overflow: "hidden",
+                padding: "10px",
+              }}
+            >
+              <Form.Item
+                label={
+                  <Text style={{ color: "white", fontSize: "14px" }}>
+                    Source Airport
+                  </Text>
+                }
+                required
+              >
+                <AirportSearchInput
+                  onSelect={(airport) => setSource(airport)}
+                  excludeIcao={destination?.icao}
+                  formatDisplayValue={(airport) =>
+                    `${airport.city}, ${airport.state}, ${airport.country}`
+                  }
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <Text style={{ color: "white", fontSize: "14px" }}>
+                    Destination Airport
+                  </Text>
+                }
+                required
+              >
+                <AirportSearchInput
+                  onSelect={(airport) => setDestination(airport)}
+                  excludeIcao={source?.icao}
+                  formatDisplayValue={(airport) =>
+                    `${airport.city}, ${airport.state}, ${airport.country}`
+                  }
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <Text style={{ color: "white", fontSize: "14px" }}>
+                    <CalendarOutlined /> Departure Time
+                  </Text>
+                }
+                required
+              >
+                <DatePicker
+                  showTime
+                  onChange={(date, dateString) => setDepartureTime(dateString)}
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <Text style={{ color: "white", fontSize: "14px" }}>
+                    <HourglassOutlined /> Flight Duration
+                  </Text>
+                }
+                required
+              >
+                <Space style={{ width: "100%" }}>
+                  <InputNumber
+                    min={0}
+                    value={flightHours}
+                    onChange={(value) => setFlightHours(value)}
+                    placeholder="Hours"
+                    style={{ width: "100%" }}
+                  />
+                  <InputNumber
+                    min={0}
+                    max={59}
+                    value={flightMinutes}
+                    onChange={(value) => setFlightMinutes(value)}
+                    placeholder="Minutes"
+                    style={{ width: "100%" }}
+                  />
+                </Space>
+              </Form.Item>
+            </Form>
+          </div>
+
+          {/* Flight Details Card */}
+          <div
+            style={{
+              backdropFilter: "blur(10px)", // Glass effect
+              backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent dark background
+              borderRadius: "15px",
+              padding: "10px",
+              flex: 1, // Allow it to grow and shrink
+              overflow: "hidden", // Prevent overflow
+              display: "flex",
+              flexDirection: "column",
+              marginBottom: "10px",
+            }}
+          >
+            {source &&
+              destination &&
+              departureTime &&
+              totalFlightDuration > 0 && (
+                <FlightDetailsDisplay
+                  source={source}
+                  destination={destination}
+                  departureTime={departureTime}
+                  flightHours={flightHours}
+                  flightMinutes={flightMinutes}
+                  style={{ flex: 1, overflowY: "auto" }} // Allow details to scroll if needed
+                />
+              )}
+          </div>
+        </div>
+
+        {/* Right Column - Flight Tips */}
+        <div
+          style={{
+            width: "25%",
+            backdropFilter: "blur(10px)", // Glass effect
+            backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent dark background
+            borderRadius: "15px",
+            padding: "10px",
+            height: "100%",
+            overflowY: "auto", // Allow scrolling if content overflows
+            pointerEvents: "auto", // Allow interaction with these elements
+          }}
+        >
+          <Title level={4} style={{ color: "white", marginBottom: "16px" }}>
             <InfoCircleOutlined /> Flight Tips
           </Title>
 
@@ -520,7 +595,7 @@ export default function App() {
             </Card>
           </Space>
         </div>
-      </Sider>
-    </Layout>
+      </div>
+    </div>
   );
 }
