@@ -7,27 +7,64 @@ import {
   getLocationName,
 } from "./utils/sunTimingCalculator";
 import GlobeApp from "./components/Globe";
-import { bearing } from '@turf/turf';
+import { bearing } from "@turf/turf";
+import FlightDetailsDisplay from "./components/FlightDetailsDisplay";
+import {
+  Layout,
+  Typography,
+  Form,
+  Input,
+  Button,
+  Card,
+  Space,
+  Spin,
+  InputNumber,
+  DatePicker,
+  Alert,
+  Collapse,
+  theme,
+} from "antd";
+import {
+  RiseOutlined,
+  SettingOutlined,
+  EnvironmentOutlined,
+  ClockCircleOutlined,
+  InfoCircleOutlined,
+  CalendarOutlined,
+  HourglassOutlined,
+  RocketOutlined,
+} from "@ant-design/icons";
 
-const getSeatRecommendation = (sourceLat, sourceLon, destLat, destLon, hasSunrise, hasSunset) => {
+const { Title, Text, Paragraph } = Typography;
+const { Header, Content, Sider } = Layout;
+const { Panel } = Collapse;
+
+const getSeatRecommendation = (
+  sourceLat,
+  sourceLon,
+  destLat,
+  destLon,
+  hasSunrise,
+  hasSunset
+) => {
   // Calculate initial bearing of flight path
   const flightBearing = bearing([sourceLon, sourceLat], [destLon, destLat]);
-  
+
   // Normalize bearing to 0-360
   const normalizedBearing = (flightBearing + 360) % 360;
-  
+
   let recommendation = {
-    sunrise: '',
-    sunset: ''
+    sunrise: "",
+    sunset: "",
   };
 
   // For sunrise (sun rises in the east)
   if (normalizedBearing >= 0 && normalizedBearing < 180) {
-    recommendation.sunrise = 'left (port)';
-    recommendation.sunset = 'right (starboard)';
+    recommendation.sunrise = "left (port)";
+    recommendation.sunset = "right (starboard)";
   } else {
-    recommendation.sunrise = 'right (starboard)';
-    recommendation.sunset = 'left (port)';
+    recommendation.sunrise = "right (starboard)";
+    recommendation.sunset = "left (port)";
   }
 
   return recommendation;
@@ -107,129 +144,164 @@ export default function App() {
   }, [source, destination, departureTime, totalFlightDuration]);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      {/* Left Panel - Flight Details (3/12 = 25%) */}
-      <div className="w-3/12 h-full bg-gray-50 p-6 overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6">Plan Your Flight</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <AirportSearchInput
-            label="Source Airport"
-            onSelect={(airport) => setSource(airport)}
-            excludeIcao={destination?.icao}
-          />
-          <AirportSearchInput
-            label="Destination Airport"
-            onSelect={(airport) => setDestination(airport)}
-            excludeIcao={source?.icao}
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Departure Time
-            </label>
-            <input
-              type="datetime-local"
-              value={departureTime}
-              onChange={(e) => setDepartureTime(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Flight Duration
-            </label>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <input
-                  type="number"
+    <Layout
+      style={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "row",
+        overflow: "hidden",
+      }}
+    >
+      {/* Left Panel - Flight Details */}
+      <Sider
+        width={320}
+        theme="dark"
+        style={{ height: "100vh", overflow: "auto" }}
+      >
+        <div className="p-4">
+          <Title level={3} style={{ color: "white", marginBottom: "24px" }}>
+            <RocketOutlined /> Plan Your Flight
+          </Title>
+
+          <Form layout="vertical" onFinish={handleSubmit} className="space-y-4">
+            <Form.Item
+              label={<Text style={{ color: "white" }}>Source Airport</Text>}
+              required
+            >
+              <AirportSearchInput
+                onSelect={(airport) => setSource(airport)}
+                excludeIcao={destination?.icao}
+                formatDisplayValue={(airport) =>
+                  `${airport.city}, ${airport.state}, ${airport.country}`
+                }
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <Text style={{ color: "white" }}>Destination Airport</Text>
+              }
+              required
+            >
+              <AirportSearchInput
+                onSelect={(airport) => setDestination(airport)}
+                excludeIcao={source?.icao}
+                formatDisplayValue={(airport) =>
+                  `${airport.city}, ${airport.state}, ${airport.country}`
+                }
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <Text style={{ color: "white" }}>
+                  <CalendarOutlined /> Departure Time
+                </Text>
+              }
+              required
+            >
+              <DatePicker
+                showTime
+                onChange={(date, dateString) => setDepartureTime(dateString)}
+                style={{ width: "100%" }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={
+                <Text style={{ color: "white" }}>
+                  <HourglassOutlined /> Flight Duration
+                </Text>
+              }
+              required
+            >
+              <Space style={{ width: "100%" }}>
+                <InputNumber
+                  min={0}
                   value={flightHours}
-                  onChange={(e) => setFlightHours(e.target.value)}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  onChange={(value) => setFlightHours(value)}
                   placeholder="Hours"
+                  style={{ width: "100%" }}
                 />
-              </div>
-              <div className="flex-1">
-                <input
-                  type="number"
+                <InputNumber
+                  min={0}
+                  max={59}
                   value={flightMinutes}
-                  onChange={(e) => setFlightMinutes(e.target.value)}
-                  min="0"
-                  max="59"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  onChange={(value) => setFlightMinutes(value)}
                   placeholder="Minutes"
+                  style={{ width: "100%" }}
                 />
-              </div>
-            </div>
-          </div>
-        </form>
+              </Space>
+            </Form.Item>
+          </Form>
 
-        {source && destination && departureTime && totalFlightDuration > 0 && (
-          <div className="mt-8 p-4 bg-white rounded-lg shadow">
-            <h3 className="text-xl font-semibold mb-4">Flight Details</h3>
-            <div className="space-y-4">
-              <div>
-                <p className="font-medium">Source</p>
-                <p>
-                  {source.name} ({source.icao})
-                </p>
-                <p className="text-sm text-gray-600">
-                  Coordinates: [{source.lat}, {source.lon}]
-                </p>
-              </div>
-              <div>
-                <p className="font-medium">Destination</p>
-                <p>
-                  {destination.name} ({destination.icao})
-                </p>
-                <p className="text-sm text-gray-600">
-                  Coordinates: [{destination.lat}, {destination.lon}]
-                </p>
-              </div>
-              <div>
-                <p className="font-medium">Departure</p>
-                <p>{new Date(departureTime).toLocaleString()}</p>
-                <p className="font-medium">Duration</p>
-                <p>
-                  {flightHours ? `${flightHours} hours ` : ""}
-                  {flightMinutes ? `${flightMinutes} minutes` : ""}
-                </p>
-              </div>
-              
-            </div>
-          </div>
-        )}
-      </div>
+          {source &&
+            destination &&
+            departureTime &&
+            totalFlightDuration > 0 && (
+              <FlightDetailsDisplay
+                source={source}
+                destination={destination}
+                departureTime={departureTime}
+                flightHours={flightHours}
+                flightMinutes={flightMinutes}
+              />
+            )}
+        </div>
+      </Sider>
 
-      {/* Middle Panel - Globe (6/12 = 50%) */}
-      <div className="w-6/12 h-full relative">
-        <div className="absolute inset-0">
+      {/* Middle Panel - Globe */}
+      <Content style={{ height: "100vh", position: "relative", flex: 1 }}>
+        <div
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        >
           <GlobeApp
-            pointA={source && { 
-              lat: source.lat, 
-              lon: source.lon,
-              name: source.name || `${source.lat.toFixed(2)}, ${source.lon.toFixed(2)}`
-            }}
-            pointB={destination && { 
-              lat: destination.lat, 
-              lon: destination.lon,
-              name: destination.name || `${destination.lat.toFixed(2)}, ${destination.lon.toFixed(2)}`
-            }}
+            pointA={
+              source && {
+                lat: source.lat,
+                lon: source.lon,
+                name:
+                  source.name ||
+                  `${source.lat.toFixed(2)}, ${source.lon.toFixed(2)}`,
+              }
+            }
+            pointB={
+              destination && {
+                lat: destination.lat,
+                lon: destination.lon,
+                name:
+                  destination.name ||
+                  `${destination.lat.toFixed(2)}, ${destination.lon.toFixed(
+                    2
+                  )}`,
+              }
+            }
           />
         </div>
-      </div>
+      </Content>
 
-      {/* Right Panel - Tips and Recommendations (3/12 = 25%) */}
-      <div className="w-3/12 h-full bg-gray-50 p-6 overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6">Flight Tips</h2>
-        <div className="space-y-6">
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-xl font-semibold mb-4">
-              Viewing Opportunities
-            </h3>
+      {/* Right Panel - Tips and Recommendations */}
+      <Sider
+        width={320}
+        theme="dark"
+        style={{ height: "100vh", overflow: "auto" }}
+      >
+        <div className="p-4">
+          <Title level={3} style={{ color: "white", marginBottom: "24px" }}>
+            <InfoCircleOutlined /> Flight Tips
+          </Title>
 
-            {viewingWindows && (
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <Card
+              title="Viewing Opportunities"
+              bordered={false}
+              className="bg-gray-800 text-white"
+            >
+              {viewingWindows && (
                 <div className="mb-4">
-                  <p className="font-medium">Seat Recommendations</p>
+                  <Text strong style={{ color: "white" }}>
+                    Seat Recommendations
+                  </Text>
                   {(() => {
                     const recommendation = getSeatRecommendation(
                       source.lat,
@@ -240,16 +312,21 @@ export default function App() {
                       !!viewingWindows.sunset.start
                     );
                     return (
-                      <div className="text-sm">
+                      <div>
                         {viewingWindows.sunrise.start && (
-                          <p className="text-orange-600">
-                            For sunrise views, choose a {recommendation.sunrise} side window seat
-                          </p>
+                          <Text type="warning" style={{ display: "block" }}>
+                            <RiseOutlined /> For sunrise views, choose a{" "}
+                            {recommendation.sunrise} side window seat
+                          </Text>
                         )}
                         {viewingWindows.sunset.start && (
-                          <p className="text-blue-600">
-                            For sunset views, choose a {recommendation.sunset} side window seat
-                          </p>
+                          <Text
+                            type="secondary"
+                            style={{ display: "block", color: "#1890ff" }}
+                          >
+                            <SettingOutlined /> For sunset views, choose a{" "}
+                            {recommendation.sunset} side window seat
+                          </Text>
                         )}
                       </div>
                     );
@@ -257,108 +334,193 @@ export default function App() {
                 </div>
               )}
 
-            {source &&
-            destination &&
-            departureTime &&
-            totalFlightDuration > 0 ? (
-              <div className="space-y-4">
-                {viewingWindows ? (
-                  <>
-                    {viewingWindows.sunrise.start && (
-                      <div className="bg-orange-50 p-3 rounded-lg">
-                        <h4 className="text-lg font-medium text-orange-700 mb-2">
-                          Sunrise Viewing Window
-                        </h4>
-                        <div className="space-y-2 text-sm">
-                          <p>
-                            <span className="font-medium">Starts:</span>{" "}
-                            {viewingWindows.sunrise.start.time}
-                            {locationNames.sunrise.start && (
-                              <span className="block text-orange-600 text-xs">
-                                Near {locationNames.sunrise.start}
-                              </span>
-                            )}
-                          </p>
-                          <p>
-                            <span className="font-medium">Ends:</span>{" "}
-                            {viewingWindows.sunrise.end.time}
-                            {locationNames.sunrise.end && (
-                              <span className="block text-orange-600 text-xs">
-                                Near {locationNames.sunrise.end}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {viewingWindows.sunset.start && (
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <h4 className="text-lg font-medium text-blue-700 mb-2">
-                          Sunset Viewing Window
-                        </h4>
-                        <div className="space-y-2 text-sm">
-                          <p>
-                            <span className="font-medium">Starts:</span>{" "}
-                            {viewingWindows.sunset.start.time}
-                            {locationNames.sunset.start && (
-                              <span className="block text-blue-600 text-xs">
-                                Near {locationNames.sunset.start}
-                              </span>
-                            )}
-                          </p>
-                          <p>
-                            <span className="font-medium">Ends:</span>{" "}
-                            {viewingWindows.sunset.end.time}
-                            {locationNames.sunset.end && (
-                              <span className="block text-blue-600 text-xs">
-                                Near {locationNames.sunset.end}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {!viewingWindows.sunrise.start &&
-                      !viewingWindows.sunset.start && (
-                        <p className="text-gray-500 italic">
-                          No sunrise or sunset viewing opportunities during this
-                          flight.
-                        </p>
+              {source &&
+              destination &&
+              departureTime &&
+              totalFlightDuration > 0 ? (
+                <div>
+                  {viewingWindows ? (
+                    <>
+                      {viewingWindows.sunrise.start && (
+                        <Card
+                          className="mb-2"
+                          style={{ backgroundColor: "rgba(250, 173, 20, 0.1)" }}
+                        >
+                          <Title level={5} style={{ color: "#faad14" }}>
+                            <RiseOutlined /> Sunrise Viewing Window
+                          </Title>
+                          <div>
+                            <div>
+                              <Text strong style={{ color: "white" }}>
+                                Starts:
+                              </Text>{" "}
+                              <Text style={{ color: "white" }}>
+                                {viewingWindows.sunrise.start.time}
+                              </Text>
+                              {locationNames.sunrise.start && (
+                                <div>
+                                  <EnvironmentOutlined
+                                    style={{ color: "#faad14" }}
+                                  />{" "}
+                                  <Text type="warning">
+                                    {locationNames.sunrise.start}
+                                  </Text>
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-2">
+                              <Text strong style={{ color: "white" }}>
+                                Ends:
+                              </Text>{" "}
+                              <Text style={{ color: "white" }}>
+                                {viewingWindows.sunrise.end.time}
+                              </Text>
+                              {locationNames.sunrise.end && (
+                                <div>
+                                  <EnvironmentOutlined
+                                    style={{ color: "#faad14" }}
+                                  />{" "}
+                                  <Text type="warning">
+                                    {locationNames.sunrise.end}
+                                  </Text>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
                       )}
-                  </>
-                ) : (
-                  <div className="flex justify-center items-center h-24">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+
+                      {viewingWindows.sunset.start && (
+                        <Card
+                          className="mb-2"
+                          style={{ backgroundColor: "rgba(24, 144, 255, 0.1)" }}
+                        >
+                          <Title level={5} style={{ color: "#1890ff" }}>
+                            <SettingOutlined /> Sunset Viewing Window
+                          </Title>
+                          <div>
+                            <div>
+                              <Text strong style={{ color: "white" }}>
+                                Starts:
+                              </Text>{" "}
+                              <Text style={{ color: "white" }}>
+                                {viewingWindows.sunset.start.time}
+                              </Text>
+                              {locationNames.sunset.start && (
+                                <div>
+                                  <EnvironmentOutlined
+                                    style={{ color: "#1890ff" }}
+                                  />{" "}
+                                  <Text style={{ color: "#1890ff" }}>
+                                    {locationNames.sunset.start}
+                                  </Text>
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-2">
+                              <Text strong style={{ color: "white" }}>
+                                Ends:
+                              </Text>{" "}
+                              <Text style={{ color: "white" }}>
+                                {viewingWindows.sunset.end.time}
+                              </Text>
+                              {locationNames.sunset.end && (
+                                <div>
+                                  <EnvironmentOutlined
+                                    style={{ color: "#1890ff" }}
+                                  />{" "}
+                                  <Text style={{ color: "#1890ff" }}>
+                                    {locationNames.sunset.end}
+                                  </Text>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      )}
+
+                      {!viewingWindows.sunrise.start &&
+                        !viewingWindows.sunset.start && (
+                          <Alert
+                            message="No sunrise or sunset viewing opportunities during this flight."
+                            type="info"
+                            showIcon
+                          />
+                        )}
+                    </>
+                  ) : (
+                    <div className="flex justify-center items-center h-24">
+                      <Spin size="large" />
+                    </div>
+                  )}
+
+                  <div className="mt-4">
+                    <Text
+                      type="secondary"
+                      style={{ display: "block", fontSize: "12px" }}
+                    >
+                      * Times are shown in your local timezone
+                    </Text>
+                    <Text
+                      type="secondary"
+                      style={{ display: "block", fontSize: "12px" }}
+                    >
+                      * Viewing windows are calculated for civil twilight
+                      periods
+                    </Text>
                   </div>
-                )}
-
-                <div className="mt-4 text-xs text-gray-500">
-                  <p>* Times are shown in your local timezone</p>
-                  <p>
-                    * Viewing windows are calculated for civil twilight periods
-                  </p>
                 </div>
-              </div>
-            ) : (
-              <p className="text-gray-500">
-                Enter flight details to get viewing opportunities
-              </p>
-            )}
-          </div>
+              ) : (
+                <Alert
+                  message="Enter flight details to get viewing opportunities"
+                  type="info"
+                  showIcon
+                />
+              )}
+            </Card>
 
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-3">General Tips</h3>
-            <ul className="list-disc pl-5 space-y-2 text-gray-700">
-              <li>Window seats offer the best views of sunrise/sunset</li>
-              <li>Consider the season when choosing your seat</li>
-              <li>Flight direction affects sun position</li>
-              <li>Morning and evening flights often offer better views</li>
-            </ul>
-          </div>
+            <Card
+              title="General Tips"
+              bordered={false}
+              className="bg-gray-800 text-white"
+            >
+              <Collapse ghost>
+                <Panel
+                  header={
+                    <Text style={{ color: "white" }}>
+                      Tips for the best views
+                    </Text>
+                  }
+                  key="1"
+                >
+                  <ul className="pl-5 space-y-2">
+                    <li>
+                      <Text style={{ color: "white" }}>
+                        Window seats offer the best views of sunrise/sunset
+                      </Text>
+                    </li>
+                    <li>
+                      <Text style={{ color: "white" }}>
+                        Consider the season when choosing your seat
+                      </Text>
+                    </li>
+                    <li>
+                      <Text style={{ color: "white" }}>
+                        Flight direction affects sun position
+                      </Text>
+                    </li>
+                    <li>
+                      <Text style={{ color: "white" }}>
+                        Morning and evening flights often offer better views
+                      </Text>
+                    </li>
+                  </ul>
+                </Panel>
+              </Collapse>
+            </Card>
+          </Space>
         </div>
-      </div>
-    </div>
+      </Sider>
+    </Layout>
   );
 }
