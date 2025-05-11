@@ -126,9 +126,9 @@ function CityLabel({ position, name, camera }) {
   });
 
   return (
-    <group ref={labelRef} position={position}>
+    <group ref={labelRef} position={position.clone().multiplyScalar(1.02)}>
       <Text
-        fontSize={0.05}
+        fontSize={0.03}
         color="white"
         anchorX="center"
         anchorY="middle"

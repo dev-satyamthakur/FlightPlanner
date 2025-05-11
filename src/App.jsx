@@ -33,6 +33,8 @@ import {
   CalendarOutlined,
   HourglassOutlined,
   RocketOutlined,
+  SunOutlined,
+  CloudOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
@@ -203,16 +205,7 @@ export default function App() {
         }}
       >
         {/* Left Column */}
-        <div
-          style={{
-            width: "25%",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            height: "100%",
-            pointerEvents: "auto",
-          }}
-        >
+        <div className="scrollable-column left-column">
           {/* Plan Your Flight Card */}
           <Card
             title={
@@ -366,17 +359,7 @@ export default function App() {
         </div>
 
         {/* Right Column - Flight Tips */}
-        {/* Right Column - Flight Tips */}
-        <div
-          style={{
-            width: "25%",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            height: "100%",
-            pointerEvents: "auto",
-          }}
-        >
+        <div className="scrollable-column right-column">
           {/* Viewing Opportunities Card */}
           <Card
             title={
@@ -430,14 +413,16 @@ export default function App() {
                             type="warning"
                             style={{ display: "block", marginBottom: "4px" }}
                           >
-                            <RiseOutlined /> For sunrise views, choose a{" "}
-                            {recommendation.sunrise} side window seat
+                            <SunOutlined style={{ color: "#faad14" }} /> For
+                            sunrise views, choose a {recommendation.sunrise}{" "}
+                            side window seat
                           </Text>
                         )}
                         {viewingWindows.sunset.start && (
                           <Text style={{ color: "#1890ff", display: "block" }}>
-                            <SettingOutlined /> For sunset views, choose a{" "}
-                            {recommendation.sunset} side window seat
+                            <CloudOutlined style={{ color: "#1890ff" }} /> For
+                            sunset views, choose a {recommendation.sunset} side
+                            window seat
                           </Text>
                         )}
                       </div>
@@ -464,7 +449,7 @@ export default function App() {
                           marginBottom: "8px",
                         }}
                       >
-                        <RiseOutlined /> Sunrise Viewing Window
+                        <SunOutlined /> Sunrise Viewing Window
                       </Title>
                       <div>
                         <div style={{ marginBottom: "8px" }}>
@@ -535,7 +520,7 @@ export default function App() {
                           marginBottom: "8px",
                         }}
                       >
-                        <SettingOutlined /> Sunset Viewing Window
+                        <CloudOutlined /> Sunset Viewing Window
                       </Title>
                       <div>
                         <div style={{ marginBottom: "8px" }}>
