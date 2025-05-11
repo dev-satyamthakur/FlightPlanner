@@ -234,12 +234,14 @@ function Globe({
   onProgressChange,
 }) {
   const globeRef = useRef();
+  const cloudMeshRef = useRef();
   const planeRef = useRef();
   const pathGroupRef = useRef();
   const [curve, setCurve] = useState(null);
   const [startTime, setStartTime] = useState(null);
   const [flightPath, setFlightPath] = useState(null);
   const texture = useLoader(THREE.TextureLoader, "/earth.jpg");
+  const cloudTexture = useLoader(THREE.TextureLoader, "/fair_clouds.jpg");
   const { camera } = useThree();
 
   useEffect(() => {
@@ -281,6 +283,11 @@ function Globe({
       globeRef.current.rotation.x = 23.4 * (Math.PI / 180);
       const rotationY = clock.getElapsedTime() * 0.1;
       globeRef.current.rotation.y = rotationY;
+
+      if (cloudMeshRef.current) {
+        cloudMeshRef.current.rotation.y += 0.0002;
+        cloudMeshRef.current.rotation.x += 0.00005;
+      }
 
       if (pathGroupRef.current) {
         pathGroupRef.current.rotation.x = 23.4 * (Math.PI / 180);
@@ -340,10 +347,20 @@ function Globe({
 
   return (
     <>
-      <group>
-        <mesh ref={globeRef}>
+      <group ref={globeRef}>
+        <mesh>
           <sphereGeometry args={[1, 64, 64]} />
           <meshStandardMaterial map={texture} metalness={0.1} roughness={0.8} />
+        </mesh>
+        <mesh ref={cloudMeshRef}>
+          <sphereGeometry args={[1.015, 64, 64]} />
+          <meshStandardMaterial
+            map={cloudTexture}
+            alphaMap={cloudTexture}
+            transparent={true}
+            opacity={0.6}
+            depthWrite={false}
+          />
         </mesh>
         <Atmosphere />
       </group>

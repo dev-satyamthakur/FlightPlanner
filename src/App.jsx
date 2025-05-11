@@ -26,8 +26,6 @@ import {
   theme,
 } from "antd";
 import {
-  RiseOutlined,
-  SettingOutlined,
   EnvironmentOutlined,
   ClockCircleOutlined,
   InfoCircleOutlined,
@@ -35,6 +33,7 @@ import {
   HourglassOutlined,
   RocketOutlined,
 } from "@ant-design/icons";
+import { WiSunrise, WiSunset } from "react-icons/wi";
 
 const { Title, Text, Paragraph } = Typography;
 const { Header, Content, Sider } = Layout;
@@ -478,7 +477,13 @@ export default function App() {
                                     marginBottom: "4px",
                                   }}
                                 >
-                                  <RiseOutlined /> For sunrise views, choose a{" "}
+                                  <WiSunrise
+                                    style={{
+                                      fontSize: "1.2em",
+                                      marginRight: "4px",
+                                    }}
+                                  />{" "}
+                                  For sunrise views, choose a{" "}
                                   {recommendation.sunrise} side window seat
                                 </Text>
                               )}
@@ -486,7 +491,13 @@ export default function App() {
                                 <Text
                                   style={{ color: "#1890ff", display: "block" }}
                                 >
-                                  <SettingOutlined /> For sunset views, choose a{" "}
+                                  <WiSunset
+                                    style={{
+                                      fontSize: "1.2em",
+                                      marginRight: "4px",
+                                    }}
+                                  />{" "}
+                                  For sunset views, choose a{" "}
                                   {recommendation.sunset} side window seat
                                 </Text>
                               )}
@@ -522,7 +533,14 @@ export default function App() {
                               marginBottom: "8px",
                             }}
                           >
-                            <RiseOutlined /> Sunrise Viewing Window
+                            <WiSunrise
+                              style={{
+                                fontSize: "1.5em",
+                                marginRight: "8px",
+                                verticalAlign: "middle",
+                              }}
+                            />{" "}
+                            Sunrise Viewing Window
                           </Title>
                           <div>
                             <div style={{ marginBottom: "8px" }}>
@@ -593,7 +611,14 @@ export default function App() {
                               marginBottom: "8px",
                             }}
                           >
-                            <SettingOutlined /> Sunset Viewing Window
+                            <WiSunset
+                              style={{
+                                fontSize: "1.5em",
+                                marginRight: "8px",
+                                verticalAlign: "middle",
+                              }}
+                            />{" "}
+                            Sunset Viewing Window
                           </Title>
                           <div>
                             <div style={{ marginBottom: "8px" }}>
