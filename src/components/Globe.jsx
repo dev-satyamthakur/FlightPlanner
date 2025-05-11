@@ -437,7 +437,7 @@ export default function GlobeApp({
             top: "20px",
             left: "50%",
             transform: "translateX(-50%)",
-            width: "80%",
+            width: "40%",
             zIndex: 1000,
           }}
         >

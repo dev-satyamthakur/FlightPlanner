@@ -19,51 +19,79 @@ export default function FlightDetailsDisplay({
   return (
     <Card
       title={
-        <Title level={4} style={{ color: "#fff" }}>
+        <Title level={4} style={{ color: "#fff", margin: 0 }}>
           Flight Details
         </Title>
       }
       style={{
-        background: "#141414",
+        background: "rgba(0, 0, 0, 0.5)",
+        backdropFilter: "blur(10px)",
         borderColor: "#303030",
         color: "#fff",
+        borderRadius: "15px",
+        height: "fit-content",
+        marginBottom: "10px",
       }}
-      headStyle={{ borderColor: "#303030" }}
+      headStyle={{
+        borderColor: "#303030",
+        padding: "12px 16px",
+      }}
+      bodyStyle={{
+        padding: "16px",
+      }}
     >
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <div>
-          <Text strong style={{ color: "#1890ff" }}>
+          <Text
+            strong
+            style={{ color: "#1890ff", display: "block", marginBottom: "4px" }}
+          >
             <EnvironmentOutlined /> Source City
           </Text>
-          <Text style={{ color: "#fff" }}>
+          <Text
+            style={{ color: "#fff", display: "block", marginBottom: "4px" }}
+          >
             {source.name} ({source.icao})
           </Text>
-          <Text type="secondary" style={{ color: "#8c8c8c" }}>
+          <Text type="secondary" style={{ color: "#8c8c8c", display: "block" }}>
             <CompassOutlined /> [{source.lat}, {source.lon}]
           </Text>
         </div>
         <div>
-          <Text strong style={{ color: "#1890ff" }}>
+          <Text
+            strong
+            style={{ color: "#1890ff", display: "block", marginBottom: "4px" }}
+          >
             <EnvironmentOutlined /> Destination
           </Text>
-          <Text style={{ color: "#fff" }}>
+          <Text
+            style={{ color: "#fff", display: "block", marginBottom: "4px" }}
+          >
             {destination.name} ({destination.icao})
           </Text>
-          <Text type="secondary" style={{ color: "#8c8c8c" }}>
+          <Text type="secondary" style={{ color: "#8c8c8c", display: "block" }}>
             <CompassOutlined /> [{destination.lat}, {destination.lon}]
           </Text>
         </div>
         <div>
-          <Text strong style={{ color: "#1890ff" }}>
+          <Text
+            strong
+            style={{ color: "#1890ff", display: "block", marginBottom: "4px" }}
+          >
             <ClockCircleOutlined /> Departure
           </Text>
-          <Text style={{ color: "#fff" }}>
+          <Text
+            style={{ color: "#fff", display: "block", marginBottom: "8px" }}
+          >
             {new Date(departureTime).toLocaleString()}
           </Text>
-          <Text strong style={{ color: "#1890ff" }}>
+          <Text
+            strong
+            style={{ color: "#1890ff", display: "block", marginBottom: "4px" }}
+          >
             <FieldTimeOutlined /> Duration
           </Text>
-          <Text style={{ color: "#fff" }}>
+          <Text style={{ color: "#fff", display: "block" }}>
             {flightHours ? `${flightHours} hours ` : ""}
             {flightMinutes ? `${flightMinutes} minutes` : ""}
           </Text>
