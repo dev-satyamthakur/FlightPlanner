@@ -10,6 +10,8 @@ import { OrbitControls, Text, Stars, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader";
+import { Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
 
 // Extend the THREE namespace to include custom loaders
 extend({ OBJLoader, MTLLoader });
@@ -37,7 +39,34 @@ class ErrorBoundary extends React.Component {
 function LoadingScreen() {
   return (
     <Html center>
-      <div>Loading...</div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          background: "rgba(20, 20, 20, 0.95)",
+          padding: "32px 48px",
+          borderRadius: "18px",
+          boxShadow: "0 4px 32px 0 rgba(0,0,0,0.4)",
+        }}
+      >
+        <Spin
+          indicator={
+            <LoadingOutlined style={{ fontSize: 48, color: "#1890ff" }} spin />
+          }
+          style={{ marginBottom: 18 }}
+        />
+        <div
+          style={{
+            color: "#fff",
+            fontWeight: 500,
+            fontSize: 18,
+            letterSpacing: 1,
+          }}
+        >
+          Loading...
+        </div>
+      </div>
     </Html>
   );
 }
@@ -243,6 +272,7 @@ function Globe({
   const texture = useLoader(THREE.TextureLoader, "/earth.jpg");
   const cloudTexture = useLoader(THREE.TextureLoader, "/fair_clouds.jpg");
   const { camera } = useThree();
+  const [airplaneLoaded, setAirplaneLoaded] = useState(false);
 
   useEffect(() => {
     if (pointA && pointB) {
@@ -277,6 +307,32 @@ function Globe({
       setFlightPath(null);
     }
   }, [pointA, pointB]);
+
+  // Preload airplane model and textures as soon as possible
+  useEffect(() => {
+    // Preload textures and models
+    useLoader.preload(THREE.TextureLoader, "/11803_Airplane_body_diff.jpg");
+    useLoader.preload(THREE.TextureLoader, "/11803_Airplane_tail_diff.jpg");
+    useLoader.preload(
+      THREE.TextureLoader,
+      "/11803_Airplane_wing_big_L_diff.jpg"
+    );
+    useLoader.preload(
+      THREE.TextureLoader,
+      "/11803_Airplane_wing_big_R_diff.jpg"
+    );
+    useLoader.preload(
+      THREE.TextureLoader,
+      "/11803_Airplane_wing_details_L_diff.jpg"
+    );
+    useLoader.preload(
+      THREE.TextureLoader,
+      "/11803_Airplane_wing_details_R_diff.jpg"
+    );
+    // Preload MTL and OBJ
+    useLoader.preload(MTLLoader, "/11803_Airplane_v1_l1.mtl");
+    useLoader.preload(OBJLoader, "/11803_Airplane_v1_l1.obj");
+  }, []);
 
   useFrame(({ clock }) => {
     if (globeRef.current) {
@@ -368,13 +424,11 @@ function Globe({
       <group ref={pathGroupRef}>
         {flightPath && <primitive object={flightPath} />}
 
-        {curve && planeRef && (
-          <group ref={planeRef}>
-            <Suspense fallback={null}>
-              <Airplane />
-            </Suspense>
-          </group>
-        )}
+        <group ref={planeRef} visible={!!curve}>
+          <Suspense fallback={null}>
+            <Airplane />
+          </Suspense>
+        </group>
 
         {cities.map((city) => {
           const position = latLonToVector3(city.lat, city.lon, 1.02);
