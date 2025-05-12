@@ -1,19 +1,18 @@
-import React, { useState, useRef, useCallback, useEffect, memo } from "react";
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  memo,
+  Suspense,
+} from "react";
 import PropTypes from "prop-types";
-import airportsData from "../data/airports.json";
-import Fuse from "fuse.js";
 import debounce from "lodash.debounce";
-import { Input, Select, Typography } from "antd";
+import { Input, Select, Typography, Spin } from "antd";
 import { SearchOutlined, EnvironmentOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 const { Text } = Typography;
-
-const airportsArray = Object.values(airportsData);
-const fuseOptions = {
-  keys: ["icao", "iata", "name", "city", "country"],
-  threshold: 0.3,
-};
 
 const AirportOption = memo(({ airport }) => (
   <div style={{ display: "flex", flexDirection: "column" }}>
@@ -37,23 +36,52 @@ AirportOption.propTypes = {
   }).isRequired,
 };
 
-const AirportSearchInput = ({ onSelect, excludeIcao }) => {
+const LazyAirportSearch = ({ onSelect, excludeIcao }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const fuse = useRef(new Fuse(airportsArray, fuseOptions)).current;
+  const [airportsArray, setAirportsArray] = useState(null);
+  const fuseRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([import("../data/airports.json"), import("fuse.js")]).then(
+      ([airportsData, Fuse]) => {
+        if (isMounted) {
+          setAirportsArray(Object.values(airportsData.default || airportsData));
+          fuseRef.current = new Fuse.default(
+            Object.values(airportsData.default || airportsData),
+            {
+              keys: ["icao", "iata", "name", "city", "country"],
+              threshold: 0.3,
+            }
+          );
+        }
+      }
+    );
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const debouncedSearch = useCallback(
     debounce((value) => {
       setLoading(true);
-      let filtered = value ? fuse.search(value).map((r) => r.item) : [];
+      if (!fuseRef.current) {
+        setResults([]);
+        setLoading(false);
+        return;
+      }
+      let filtered = value
+        ? fuseRef.current.search(value).map((r) => r.item)
+        : [];
       if (excludeIcao) {
         filtered = filtered.filter((a) => a.icao !== excludeIcao);
       }
       setResults(filtered.slice(0, 10));
       setLoading(false);
     }, 300),
-    [fuse, excludeIcao]
+    [excludeIcao]
   );
 
   useEffect(() => {
@@ -91,6 +119,10 @@ const AirportSearchInput = ({ onSelect, excludeIcao }) => {
     []
   );
 
+  if (!airportsArray) {
+    return <Spin style={{ width: "100%" }} />;
+  }
+
   return (
     <Select
       showSearch
@@ -119,9 +151,9 @@ const AirportSearchInput = ({ onSelect, excludeIcao }) => {
   );
 };
 
-AirportSearchInput.propTypes = {
+LazyAirportSearch.propTypes = {
   onSelect: PropTypes.func.isRequired,
   excludeIcao: PropTypes.string,
 };
 
-export default memo(AirportSearchInput);
+export default memo(LazyAirportSearch);
