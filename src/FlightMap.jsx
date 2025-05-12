@@ -5,14 +5,9 @@ import L from "leaflet";
 import planeLeftIconUrl from "./assets/plane_left.png";
 import planeRightIconUrl from "./assets/plane_right.png";
 import { useEffect, useRef, useState } from "react";
-import "./FlighMap.css";
+import "./FlightMap.css";
 
 const createPlaneIcon = (direction) => {
-  console.log("Creating plane icon:", {
-    direction,
-    iconUrl:
-      direction === "east-to-west" ? planeLeftIconUrl : planeRightIconUrl,
-  });
   return new L.Icon({
     iconUrl:
       direction === "east-to-west" ? planeLeftIconUrl : planeRightIconUrl,
@@ -23,64 +18,40 @@ const createPlaneIcon = (direction) => {
 };
 
 const FlightMap = ({ source, destination }) => {
+  if (!source || !destination) {
+    console.error("Invalid coordinates:", { source, destination });
+    return <div>Error: Invalid coordinates</div>;
+  }
+
   try {
-    // Create points from source and destination coordinates
     const start = turf.point([source[1], source[0]]); // [lon, lat]
     const end = turf.point([destination[1], destination[0]]); // [lon, lat]
 
-    // Add validation
-    if (!start || !end || !source || !destination) {
-      console.error("Invalid coordinates:", { source, destination });
-      return <div>Error: Invalid coordinates</div>;
-    }
-
-    // Determine overall flight direction
     const isWestToEast =
       end.geometry.coordinates[0] > start.geometry.coordinates[0];
     const flightDirection = isWestToEast ? "west-to-east" : "east-to-west";
 
-    // Create a great circle line with many points for smooth animation
     const npoints = 300;
     const greatCircle = turf.greatCircle(start, end, { npoints });
-
-    // Path as [lat, lng] pairs
     const path = greatCircle.geometry.coordinates.map(([lng, lat]) => [
       lat,
       lng,
     ]);
 
-    console.log("Path created:", {
-      pathLength: path.length,
-      firstPoint: path[0],
-      lastPoint: path[path.length - 1],
-    });
-
-    // Animation state
     const [planeIndex, setPlaneIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const intervalRef = useRef();
 
     useEffect(() => {
-      console.log("Animation started", { pathLength: path.length, isPaused }); // Debug log
       let timeoutId;
-      let intervalId;
 
       const animatePlane = () => {
-        console.log("Animating plane at index:", planeIndex); // Debug log
         setPlaneIndex((prev) => {
-          if (prev === 0) {
+          if (prev === 0 || prev === path.length - 1) {
             setIsPaused(true);
             timeoutId = setTimeout(() => {
               setIsPaused(false);
-              setPlaneIndex(1);
-            }, 1000);
-            return prev;
-          }
-          if (prev === path.length - 1) {
-            setIsPaused(true);
-            timeoutId = setTimeout(() => {
-              setIsPaused(false);
-              setPlaneIndex(0);
+              return prev === 0 ? 1 : 0;
             }, 1000);
             return prev;
           }
@@ -89,19 +60,15 @@ const FlightMap = ({ source, destination }) => {
       };
 
       if (!isPaused && path.length > 0) {
-        // Add path.length check
-        intervalId = setInterval(animatePlane, 100); // Changed to 100ms
-        intervalRef.current = intervalId;
+        intervalRef.current = setInterval(animatePlane, 100);
       }
 
       return () => {
-        if (intervalId) clearInterval(intervalId);
         if (timeoutId) clearTimeout(timeoutId);
         if (intervalRef.current) clearInterval(intervalRef.current);
       };
-    }, [path.length, isPaused, planeIndex]); // Add planeIndex to dependencies
+    }, [path.length, isPaused]);
 
-    // Calculate center point for the map
     const center = [
       (source[0] + destination[0]) / 2,
       (source[1] + destination[1]) / 2,
@@ -118,16 +85,14 @@ const FlightMap = ({ source, destination }) => {
             attribution="© Google"
             url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
           />
-          {/* Dotted great circle path */}
           <Polyline
             positions={path}
             pathOptions={{
               color: "blue",
               weight: 3,
-              dashArray: "8 12", // Dotted/dashed line
+              dashArray: "8 12",
             }}
           />
-          {/* Animated plane marker */}
           <Marker
             position={path[planeIndex]}
             icon={createPlaneIcon(flightDirection)}

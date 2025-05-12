@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, memo } from "react";
+import PropTypes from "prop-types";
 import airportsData from "../data/airports.json";
 import Fuse from "fuse.js";
 import debounce from "lodash.debounce";
@@ -14,7 +15,29 @@ const fuseOptions = {
   threshold: 0.3,
 };
 
-export default function AirportSearchInput({ onSelect, excludeIcao }) {
+const AirportOption = memo(({ airport }) => (
+  <div style={{ display: "flex", flexDirection: "column" }}>
+    <Text strong>
+      {airport.name} ({airport.icao}
+      {airport.iata && `/${airport.iata}`})
+    </Text>
+    <Text type="secondary">
+      <EnvironmentOutlined /> {airport.city}, {airport.country}
+    </Text>
+  </div>
+));
+
+AirportOption.propTypes = {
+  airport: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    icao: PropTypes.string.isRequired,
+    iata: PropTypes.string,
+    city: PropTypes.string.isRequired,
+    country: PropTypes.string.isRequired,
+  }).isRequired,
+};
+
+const AirportSearchInput = ({ onSelect, excludeIcao }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,18 +60,36 @@ export default function AirportSearchInput({ onSelect, excludeIcao }) {
     return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
 
-  const handleChange = (value) => {
-    setQuery(value);
-    debouncedSearch(value);
-  };
+  const handleChange = useCallback(
+    (value) => {
+      setQuery(value);
+      debouncedSearch(value);
+    },
+    [debouncedSearch]
+  );
 
-  const handleSelect = (value) => {
-    const airport = results.find((a) => a.icao === value);
-    if (airport) {
-      setQuery(`${airport.city}, ${airport.country}`);
-      onSelect(airport);
-    }
-  };
+  const handleSelect = useCallback(
+    (value) => {
+      const airport = results.find((a) => a.icao === value);
+      if (airport) {
+        setQuery(
+          `${airport.name} (${airport.icao}${
+            airport.iata ? "/" + airport.iata : ""
+          })`
+        );
+        onSelect(airport);
+      }
+    },
+    [results, onSelect]
+  );
+
+  const getOptionLabel = useCallback(
+    (airport) =>
+      `${airport.name} (${airport.icao}${
+        airport.iata ? "/" + airport.iata : ""
+      })`,
+    []
+  );
 
   return (
     <Select
@@ -69,21 +110,18 @@ export default function AirportSearchInput({ onSelect, excludeIcao }) {
         <Option
           key={airport.icao}
           value={airport.icao}
-          label={`${airport.name} (${airport.icao}${
-            airport.iata ? "/" + airport.iata : ""
-          })`}
+          label={getOptionLabel(airport)}
         >
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <Text strong>
-              {airport.name} ({airport.icao}
-              {airport.iata && `/${airport.iata}`})
-            </Text>
-            <Text type="secondary">
-              <EnvironmentOutlined /> {airport.city}, {airport.country}
-            </Text>
-          </div>
+          <AirportOption airport={airport} />
         </Option>
       ))}
     </Select>
   );
-}
+};
+
+AirportSearchInput.propTypes = {
+  onSelect: PropTypes.func.isRequired,
+  excludeIcao: PropTypes.string,
+};
+
+export default memo(AirportSearchInput);

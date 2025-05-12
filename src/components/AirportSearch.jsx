@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import AirportSearchInput from "./AirportSearchInput";
 
-export default function App() {
+export default function AirportSearch() {
   const [source, setSource] = useState(null); // { lat, lon, icao, ... }
   const [destination, setDestination] = useState(null);
 

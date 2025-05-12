@@ -1,87 +1,62 @@
 import "./App.css";
-import SunPositionFlightMap from "./components/SunPositionFlightMap";
+import React, { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import { bearing } from "@turf/turf";
+import {
+  Typography,
+  Form,
+  Card,
+  Space,
+  InputNumber,
+  DatePicker,
+  Alert,
+} from "antd";
+import {
+  EnvironmentOutlined,
+  CalendarOutlined,
+  HourglassOutlined,
+} from "@ant-design/icons";
+import { WiSunrise, WiSunset } from "react-icons/wi";
 import AirportSearchInput from "./components/AirportSearchInput";
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import GlobeApp from "./components/Globe";
+import FlightDetailsDisplay from "./components/FlightDetailsDisplay";
 import {
   calculateSunViewingWindows,
   getLocationName,
 } from "./utils/sunTimingCalculator";
-import GlobeApp from "./components/Globe";
-import { bearing } from "@turf/turf";
-import FlightDetailsDisplay from "./components/FlightDetailsDisplay";
-import {
-  Layout,
-  Typography,
-  Form,
-  Input,
-  Button,
-  Card,
-  Space,
-  Spin,
-  InputNumber,
-  DatePicker,
-  Alert,
-  Collapse,
-  theme,
-} from "antd";
-import {
-  EnvironmentOutlined,
-  ClockCircleOutlined,
-  InfoCircleOutlined,
-  CalendarOutlined,
-  HourglassOutlined,
-  RocketOutlined,
-} from "@ant-design/icons";
-import { WiSunrise, WiSunset } from "react-icons/wi";
+import PropTypes from "prop-types";
 
-const { Title, Text, Paragraph } = Typography;
-const { Header, Content, Sider } = Layout;
-const { Panel } = Collapse;
+const { Title } = Typography;
 
-const getSeatRecommendation = (
-  sourceLat,
-  sourceLon,
-  destLat,
-  destLon,
-  hasSunrise,
-  hasSunset
-) => {
-  // Calculate initial bearing of flight path
+const getSeatRecommendation = (sourceLat, sourceLon, destLat, destLon) => {
   const flightBearing = bearing([sourceLon, sourceLat], [destLon, destLat]);
-
-  // Normalize bearing to 0-360
   const normalizedBearing = (flightBearing + 360) % 360;
 
-  let recommendation = {
-    sunrise: "",
-    sunset: "",
+  return {
+    sunrise:
+      normalizedBearing >= 0 && normalizedBearing < 180
+        ? "left (port)"
+        : "right (starboard)",
+    sunset:
+      normalizedBearing >= 0 && normalizedBearing < 180
+        ? "right (starboard)"
+        : "left (port)",
   };
-
-  // For sunrise (sun rises in the east)
-  if (normalizedBearing >= 0 && normalizedBearing < 180) {
-    recommendation.sunrise = "left (port)";
-    recommendation.sunset = "right (starboard)";
-  } else {
-    recommendation.sunrise = "right (starboard)";
-    recommendation.sunset = "left (port)";
-  }
-
-  return recommendation;
 };
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -20 },
-  transition: { duration: 0.3 },
-};
-
-const fadeIn = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
-  transition: { duration: 0.3 },
+const animations = {
+  fadeInUp: {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 },
+    transition: { duration: 0.3 },
+  },
+  fadeIn: {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: { opacity: 0 },
+    transition: { duration: 0.3 },
+  },
 };
 
 export default function App() {
@@ -96,6 +71,11 @@ export default function App() {
     sunset: { start: null, end: null },
   });
 
+  const totalFlightDuration = useCallback(
+    () => parseInt(flightHours || "0") * 60 + parseInt(flightMinutes || "0"),
+    [flightHours, flightMinutes]
+  );
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (
@@ -109,16 +89,14 @@ export default function App() {
     }
   };
 
-  const totalFlightDuration =
-    parseInt(flightHours || "0") * 60 + parseInt(flightMinutes || "0");
-
   useEffect(() => {
-    if (source && destination && departureTime && totalFlightDuration > 0) {
+    const duration = totalFlightDuration();
+    if (source && destination && departureTime && duration > 0) {
       const windows = calculateSunViewingWindows(
         [source.lat, source.lon],
         [destination.lat, destination.lon],
         new Date(departureTime),
-        totalFlightDuration
+        duration
       );
       setViewingWindows(windows);
 
@@ -225,7 +203,7 @@ export default function App() {
         {/* Left Column */}
         <motion.div
           className="scrollable-column left-column"
-          variants={fadeInUp}
+          variants={animations.fadeInUp}
           initial="initial"
           animate="animate"
           exit="exit"
@@ -233,7 +211,7 @@ export default function App() {
           {/* Plan Your Flight Card */}
           <motion.div
             layout
-            variants={fadeIn}
+            variants={animations.fadeIn}
             initial="initial"
             animate="animate"
             exit="exit"
@@ -241,7 +219,7 @@ export default function App() {
             <Card
               title={
                 <Title level={4} style={{ color: "#fff", margin: 0 }}>
-                  <RocketOutlined /> Plan Your Flight
+                  Plan Your Flight
                 </Title>
               }
               style={{
@@ -270,7 +248,7 @@ export default function App() {
               >
                 <Form.Item
                   label={
-                    <Text
+                    <Typography.Text
                       style={{
                         color: "white",
                         fontSize: "14px",
@@ -278,7 +256,7 @@ export default function App() {
                       }}
                     >
                       Source Airport
-                    </Text>
+                    </Typography.Text>
                   }
                   required
                   style={{ marginBottom: "16px" }}
@@ -294,7 +272,7 @@ export default function App() {
 
                 <Form.Item
                   label={
-                    <Text
+                    <Typography.Text
                       style={{
                         color: "white",
                         fontSize: "14px",
@@ -302,7 +280,7 @@ export default function App() {
                       }}
                     >
                       Destination Airport
-                    </Text>
+                    </Typography.Text>
                   }
                   required
                   style={{ marginBottom: "16px" }}
@@ -318,7 +296,7 @@ export default function App() {
 
                 <Form.Item
                   label={
-                    <Text
+                    <Typography.Text
                       style={{
                         color: "white",
                         fontSize: "14px",
@@ -326,7 +304,7 @@ export default function App() {
                       }}
                     >
                       <CalendarOutlined /> Departure Time
-                    </Text>
+                    </Typography.Text>
                   }
                   required
                   style={{ marginBottom: "16px" }}
@@ -342,7 +320,7 @@ export default function App() {
 
                 <Form.Item
                   label={
-                    <Text
+                    <Typography.Text
                       style={{
                         color: "white",
                         fontSize: "14px",
@@ -350,7 +328,7 @@ export default function App() {
                       }}
                     >
                       <HourglassOutlined /> Flight Duration
-                    </Text>
+                    </Typography.Text>
                   }
                   required
                   style={{ marginBottom: "0" }}
@@ -378,33 +356,31 @@ export default function App() {
           </motion.div>
 
           {/* Flight Details Card */}
-          <AnimatePresence>
-            {source &&
-              destination &&
-              departureTime &&
-              totalFlightDuration > 0 && (
-                <motion.div
-                  variants={fadeInUp}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                >
-                  <FlightDetailsDisplay
-                    source={source}
-                    destination={destination}
-                    departureTime={departureTime}
-                    flightHours={flightHours}
-                    flightMinutes={flightMinutes}
-                  />
-                </motion.div>
-              )}
-          </AnimatePresence>
+          {source &&
+            destination &&
+            departureTime &&
+            totalFlightDuration() > 0 && (
+              <motion.div
+                variants={animations.fadeInUp}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                <FlightDetailsDisplay
+                  source={source}
+                  destination={destination}
+                  departureTime={departureTime}
+                  flightHours={flightHours}
+                  flightMinutes={flightMinutes}
+                />
+              </motion.div>
+            )}
         </motion.div>
 
         {/* Right Column - Flight Tips */}
         <motion.div
           className="scrollable-column right-column"
-          variants={fadeInUp}
+          variants={animations.fadeInUp}
           initial="initial"
           animate="animate"
           exit="exit"
@@ -414,7 +390,7 @@ export default function App() {
             <Card
               title={
                 <Title level={4} style={{ color: "#fff", margin: 0 }}>
-                  <InfoCircleOutlined /> Flight Tips
+                  Flight Tips
                 </Title>
               }
               style={{
@@ -439,278 +415,259 @@ export default function App() {
                 size="middle"
                 style={{ width: "100%" }}
               >
-                <AnimatePresence>
-                  {viewingWindows && (
-                    <motion.div
-                      variants={fadeIn}
-                      initial="initial"
-                      animate="animate"
-                      exit="exit"
-                    >
-                      <div>
-                        <Text
-                          strong
+                {viewingWindows && (
+                  <motion.div
+                    variants={animations.fadeIn}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                  >
+                    <div>
+                      <Typography.Text
+                        strong
+                        style={{
+                          color: "#1890ff",
+                          display: "block",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        Seat Recommendations
+                      </Typography.Text>
+                      {(() => {
+                        const recommendation = getSeatRecommendation(
+                          source.lat,
+                          source.lon,
+                          destination.lat,
+                          destination.lon
+                        );
+                        return (
+                          <div>
+                            {viewingWindows.sunrise.start && (
+                              <Typography.Text
+                                type="warning"
+                                style={{
+                                  display: "block",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                <WiSunrise
+                                  style={{
+                                    fontSize: "1.2em",
+                                    marginRight: "4px",
+                                  }}
+                                />{" "}
+                                For sunrise views, choose a{" "}
+                                {recommendation.sunrise} side window seat
+                              </Typography.Text>
+                            )}
+                            {viewingWindows.sunset.start && (
+                              <Typography.Text
+                                style={{ color: "#1890ff", display: "block" }}
+                              >
+                                <WiSunset
+                                  style={{
+                                    fontSize: "1.2em",
+                                    marginRight: "4px",
+                                  }}
+                                />{" "}
+                                For sunset views, choose a{" "}
+                                {recommendation.sunset} side window seat
+                              </Typography.Text>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </motion.div>
+                )}
+
+                {source && destination && viewingWindows && (
+                  <motion.div
+                    variants={animations.fadeInUp}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                  >
+                    {viewingWindows.sunrise.start && (
+                      <Card
+                        style={{
+                          background: "rgba(250, 173, 20, 0.1)",
+                          borderColor: "#faad14",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <Title
+                          level={5}
+                          style={{
+                            color: "#faad14",
+                            margin: 0,
+                            marginBottom: "8px",
+                          }}
+                        >
+                          <WiSunrise
+                            style={{
+                              fontSize: "1.5em",
+                              marginRight: "8px",
+                              verticalAlign: "middle",
+                            }}
+                          />{" "}
+                          Sunrise Viewing Window
+                        </Title>
+                        <div>
+                          <div style={{ marginBottom: "8px" }}>
+                            <Typography.Text
+                              strong
+                              style={{
+                                color: "#fff",
+                                display: "block",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              Starts:
+                            </Typography.Text>
+                            <Typography.Text style={{ color: "#fff" }}>
+                              {viewingWindows.sunrise.start.time}
+                            </Typography.Text>
+                            {locationNames.sunrise.start && (
+                              <Typography.Text
+                                type="warning"
+                                style={{ display: "block", marginTop: "4px" }}
+                              >
+                                <EnvironmentOutlined />{" "}
+                                {locationNames.sunrise.start}
+                              </Typography.Text>
+                            )}
+                          </div>
+                          <div>
+                            <Typography.Text
+                              strong
+                              style={{
+                                color: "#fff",
+                                display: "block",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              Ends:
+                            </Typography.Text>
+                            <Typography.Text style={{ color: "#fff" }}>
+                              {viewingWindows.sunrise.end.time}
+                            </Typography.Text>
+                            {locationNames.sunrise.end && (
+                              <Typography.Text
+                                type="warning"
+                                style={{ display: "block", marginTop: "4px" }}
+                              >
+                                <EnvironmentOutlined />{" "}
+                                {locationNames.sunrise.end}
+                              </Typography.Text>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+
+                    {viewingWindows.sunset.start && (
+                      <Card
+                        style={{
+                          background: "rgba(24, 144, 255, 0.1)",
+                          borderColor: "#1890ff",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <Title
+                          level={5}
                           style={{
                             color: "#1890ff",
-                            display: "block",
+                            margin: 0,
                             marginBottom: "8px",
                           }}
                         >
-                          Seat Recommendations
-                        </Text>
-                        {(() => {
-                          const recommendation = getSeatRecommendation(
-                            source.lat,
-                            source.lon,
-                            destination.lat,
-                            destination.lon,
-                            !!viewingWindows.sunrise.start,
-                            !!viewingWindows.sunset.start
-                          );
-                          return (
-                            <div>
-                              {viewingWindows.sunrise.start && (
-                                <Text
-                                  type="warning"
-                                  style={{
-                                    display: "block",
-                                    marginBottom: "4px",
-                                  }}
-                                >
-                                  <WiSunrise
-                                    style={{
-                                      fontSize: "1.2em",
-                                      marginRight: "4px",
-                                    }}
-                                  />{" "}
-                                  For sunrise views, choose a{" "}
-                                  {recommendation.sunrise} side window seat
-                                </Text>
-                              )}
-                              {viewingWindows.sunset.start && (
-                                <Text
-                                  style={{ color: "#1890ff", display: "block" }}
-                                >
-                                  <WiSunset
-                                    style={{
-                                      fontSize: "1.2em",
-                                      marginRight: "4px",
-                                    }}
-                                  />{" "}
-                                  For sunset views, choose a{" "}
-                                  {recommendation.sunset} side window seat
-                                </Text>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <AnimatePresence>
-                  {source && destination && viewingWindows ? (
-                    <motion.div
-                      variants={fadeInUp}
-                      initial="initial"
-                      animate="animate"
-                      exit="exit"
-                    >
-                      {viewingWindows.sunrise.start && (
-                        <Card
-                          style={{
-                            background: "rgba(250, 173, 20, 0.1)",
-                            borderColor: "#faad14",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          <Title
-                            level={5}
+                          <WiSunset
                             style={{
-                              color: "#faad14",
-                              margin: 0,
-                              marginBottom: "8px",
+                              fontSize: "1.5em",
+                              marginRight: "8px",
+                              verticalAlign: "middle",
                             }}
-                          >
-                            <WiSunrise
+                          />{" "}
+                          Sunset Viewing Window
+                        </Title>
+                        <div>
+                          <div style={{ marginBottom: "8px" }}>
+                            <Typography.Text
+                              strong
                               style={{
-                                fontSize: "1.5em",
-                                marginRight: "8px",
-                                verticalAlign: "middle",
+                                color: "#fff",
+                                display: "block",
+                                marginBottom: "4px",
                               }}
-                            />{" "}
-                            Sunrise Viewing Window
-                          </Title>
-                          <div>
-                            <div style={{ marginBottom: "8px" }}>
-                              <Text
-                                strong
+                            >
+                              Starts:
+                            </Typography.Text>
+                            <Typography.Text style={{ color: "#fff" }}>
+                              {viewingWindows.sunset.start.time}
+                            </Typography.Text>
+                            {locationNames.sunset.start && (
+                              <Typography.Text
                                 style={{
-                                  color: "#fff",
+                                  color: "#1890ff",
                                   display: "block",
-                                  marginBottom: "4px",
+                                  marginTop: "4px",
                                 }}
                               >
-                                Starts:
-                              </Text>
-                              <Text style={{ color: "#fff" }}>
-                                {viewingWindows.sunrise.start.time}
-                              </Text>
-                              {locationNames.sunrise.start && (
-                                <Text
-                                  type="warning"
-                                  style={{ display: "block", marginTop: "4px" }}
-                                >
-                                  <EnvironmentOutlined />{" "}
-                                  {locationNames.sunrise.start}
-                                </Text>
-                              )}
-                            </div>
-                            <div>
-                              <Text
-                                strong
-                                style={{
-                                  color: "#fff",
-                                  display: "block",
-                                  marginBottom: "4px",
-                                }}
-                              >
-                                Ends:
-                              </Text>
-                              <Text style={{ color: "#fff" }}>
-                                {viewingWindows.sunrise.end.time}
-                              </Text>
-                              {locationNames.sunrise.end && (
-                                <Text
-                                  type="warning"
-                                  style={{ display: "block", marginTop: "4px" }}
-                                >
-                                  <EnvironmentOutlined />{" "}
-                                  {locationNames.sunrise.end}
-                                </Text>
-                              )}
-                            </div>
+                                <EnvironmentOutlined />{" "}
+                                {locationNames.sunset.start}
+                              </Typography.Text>
+                            )}
                           </div>
-                        </Card>
-                      )}
-
-                      {viewingWindows.sunset.start && (
-                        <Card
-                          style={{
-                            background: "rgba(24, 144, 255, 0.1)",
-                            borderColor: "#1890ff",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          <Title
-                            level={5}
-                            style={{
-                              color: "#1890ff",
-                              margin: 0,
-                              marginBottom: "8px",
-                            }}
-                          >
-                            <WiSunset
+                          <div>
+                            <Typography.Text
+                              strong
                               style={{
-                                fontSize: "1.5em",
-                                marginRight: "8px",
-                                verticalAlign: "middle",
+                                color: "#fff",
+                                display: "block",
+                                marginBottom: "4px",
                               }}
-                            />{" "}
-                            Sunset Viewing Window
-                          </Title>
-                          <div>
-                            <div style={{ marginBottom: "8px" }}>
-                              <Text
-                                strong
+                            >
+                              Ends:
+                            </Typography.Text>
+                            <Typography.Text style={{ color: "#fff" }}>
+                              {viewingWindows.sunset.end.time}
+                            </Typography.Text>
+                            {locationNames.sunset.end && (
+                              <Typography.Text
                                 style={{
-                                  color: "#fff",
+                                  color: "#1890ff",
                                   display: "block",
-                                  marginBottom: "4px",
+                                  marginTop: "4px",
                                 }}
                               >
-                                Starts:
-                              </Text>
-                              <Text style={{ color: "#fff" }}>
-                                {viewingWindows.sunset.start.time}
-                              </Text>
-                              {locationNames.sunset.start && (
-                                <Text
-                                  style={{
-                                    color: "#1890ff",
-                                    display: "block",
-                                    marginTop: "4px",
-                                  }}
-                                >
-                                  <EnvironmentOutlined />{" "}
-                                  {locationNames.sunset.start}
-                                </Text>
-                              )}
-                            </div>
-                            <div>
-                              <Text
-                                strong
-                                style={{
-                                  color: "#fff",
-                                  display: "block",
-                                  marginBottom: "4px",
-                                }}
-                              >
-                                Ends:
-                              </Text>
-                              <Text style={{ color: "#fff" }}>
-                                {viewingWindows.sunset.end.time}
-                              </Text>
-                              {locationNames.sunset.end && (
-                                <Text
-                                  style={{
-                                    color: "#1890ff",
-                                    display: "block",
-                                    marginTop: "4px",
-                                  }}
-                                >
-                                  <EnvironmentOutlined />{" "}
-                                  {locationNames.sunset.end}
-                                </Text>
-                              )}
-                            </div>
+                                <EnvironmentOutlined />{" "}
+                                {locationNames.sunset.end}
+                              </Typography.Text>
+                            )}
                           </div>
-                        </Card>
-                      )}
+                        </div>
+                      </Card>
+                    )}
 
-                      {!viewingWindows.sunrise.start &&
-                        !viewingWindows.sunset.start && (
-                          <Alert
-                            message="No sunrise or sunset viewing opportunities during this flight."
-                            type="info"
-                            showIcon
-                          />
-                        )}
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      variants={fadeIn}
-                      initial="initial"
-                      animate="animate"
-                      exit="exit"
-                    >
-                      <Alert
-                        message="Enter flight details to get viewing opportunities"
-                        type="info"
-                        showIcon
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    {!viewingWindows.sunrise.start &&
+                      !viewingWindows.sunset.start && (
+                        <Alert
+                          message="No sunrise or sunset viewing opportunities during this flight."
+                          type="info"
+                          showIcon
+                        />
+                      )}
+                  </motion.div>
+                )}
 
                 <motion.div
-                  variants={fadeIn}
+                  variants={animations.fadeIn}
                   initial="initial"
                   animate="animate"
                 >
                   <div>
-                    <Text
+                    <Typography.Text
                       type="secondary"
                       style={{
                         display: "block",
@@ -719,14 +676,14 @@ export default function App() {
                       }}
                     >
                       * Times are shown in your local timezone
-                    </Text>
-                    <Text
+                    </Typography.Text>
+                    <Typography.Text
                       type="secondary"
                       style={{ display: "block", fontSize: "12px" }}
                     >
                       * Viewing windows are calculated for civil twilight
                       periods
-                    </Text>
+                    </Typography.Text>
                   </div>
                 </motion.div>
               </Space>
@@ -735,7 +692,7 @@ export default function App() {
 
           {/* General Tips Card */}
           <motion.div
-            variants={fadeInUp}
+            variants={animations.fadeInUp}
             initial="initial"
             animate="animate"
             exit="exit"
@@ -764,24 +721,24 @@ export default function App() {
             >
               <ul style={{ listStyle: "disc", paddingLeft: "20px", margin: 0 }}>
                 <li style={{ marginBottom: "8px" }}>
-                  <Text style={{ color: "#fff" }}>
+                  <Typography.Text style={{ color: "#fff" }}>
                     Window seats offer the best views of sunrise/sunset
-                  </Text>
+                  </Typography.Text>
                 </li>
                 <li style={{ marginBottom: "8px" }}>
-                  <Text style={{ color: "#fff" }}>
+                  <Typography.Text style={{ color: "#fff" }}>
                     Consider the season when choosing your seat
-                  </Text>
+                  </Typography.Text>
                 </li>
                 <li style={{ marginBottom: "8px" }}>
-                  <Text style={{ color: "#fff" }}>
+                  <Typography.Text style={{ color: "#fff" }}>
                     Flight direction affects sun position
-                  </Text>
+                  </Typography.Text>
                 </li>
                 <li>
-                  <Text style={{ color: "#fff" }}>
+                  <Typography.Text style={{ color: "#fff" }}>
                     Morning and evening flights often offer better views
-                  </Text>
+                  </Typography.Text>
                 </li>
               </ul>
             </Card>
@@ -791,3 +748,29 @@ export default function App() {
     </div>
   );
 }
+
+App.propTypes = {
+  source: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    icao: PropTypes.string.isRequired,
+    city: PropTypes.string.isRequired,
+    state: PropTypes.string,
+    country: PropTypes.string.isRequired,
+    lat: PropTypes.number.isRequired,
+    lon: PropTypes.number.isRequired,
+  }).isRequired,
+  destination: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    icao: PropTypes.string.isRequired,
+    city: PropTypes.string.isRequired,
+    state: PropTypes.string,
+    country: PropTypes.string.isRequired,
+    lat: PropTypes.number.isRequired,
+    lon: PropTypes.number.isRequired,
+  }).isRequired,
+  departureTime: PropTypes.string.isRequired,
+  flightHours: PropTypes.string.isRequired,
+  flightMinutes: PropTypes.string.isRequired,
+  viewingWindows: PropTypes.object,
+  locationNames: PropTypes.object.isRequired,
+};
