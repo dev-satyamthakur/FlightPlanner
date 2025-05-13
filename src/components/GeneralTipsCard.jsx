@@ -6,7 +6,10 @@ export default function GeneralTipsCard() {
   return (
     <Card
       title={
-        <Title level={4} style={{ color: "#fff", margin: 0 }}>
+        <Title
+          level={4}
+          style={{ color: "#fff", margin: 0, fontFamily: "var(--font-accent)" }}
+        >
           General Tips
         </Title>
       }
@@ -25,22 +28,30 @@ export default function GeneralTipsCard() {
     >
       <ul style={{ listStyle: "disc", paddingLeft: "20px", margin: 0 }}>
         <li style={{ marginBottom: "8px" }}>
-          <Typography.Text style={{ color: "#fff" }}>
+          <Typography.Text
+            style={{ color: "#fff", fontFamily: "var(--font-secondary)" }}
+          >
             Window seats offer the best views of sunrise/sunset
           </Typography.Text>
         </li>
         <li style={{ marginBottom: "8px" }}>
-          <Typography.Text style={{ color: "#fff" }}>
+          <Typography.Text
+            style={{ color: "#fff", fontFamily: "var(--font-secondary)" }}
+          >
             Consider the season when choosing your seat
           </Typography.Text>
         </li>
         <li style={{ marginBottom: "8px" }}>
-          <Typography.Text style={{ color: "#fff" }}>
+          <Typography.Text
+            style={{ color: "#fff", fontFamily: "var(--font-secondary)" }}
+          >
             Flight direction affects sun position
           </Typography.Text>
         </li>
         <li>
-          <Typography.Text style={{ color: "#fff" }}>
+          <Typography.Text
+            style={{ color: "#fff", fontFamily: "var(--font-secondary)" }}
+          >
             Morning and evening flights often offer better views
           </Typography.Text>
         </li>

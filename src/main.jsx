@@ -11,6 +11,14 @@ createRoot(document.getElementById("root")).render(
         algorithm: theme.darkAlgorithm,
         token: {
           colorPrimary: "#1890ff",
+          fontFamily: "var(--font-secondary)",
+        },
+        components: {
+          Typography: {
+            fontWeightStrong: 500,
+            titleMarginBottom: 0,
+            titleFontWeight: 500,
+          },
         },
       }}
     >

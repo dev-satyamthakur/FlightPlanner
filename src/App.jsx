@@ -200,7 +200,7 @@ export default function App() {
               >
                 <Spin size="large" />
                 <div style={{ marginTop: "20px" }}>
-                  <Typography.Text>
+                  <Typography.Text className="accent-text">
                     Loading interactive globe...
                   </Typography.Text>
                 </div>

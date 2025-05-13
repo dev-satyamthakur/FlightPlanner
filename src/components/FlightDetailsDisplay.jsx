@@ -14,15 +14,34 @@ const DetailSection = memo(({ icon, title, mainText, subText }) => (
   <div>
     <Text
       strong
-      style={{ color: "#1890ff", display: "block", marginBottom: "4px" }}
+      style={{
+        color: "#1890ff",
+        display: "block",
+        marginBottom: "4px",
+        fontFamily: "var(--font-primary)",
+      }}
     >
       {icon} {title}
     </Text>
-    <Text style={{ color: "#fff", display: "block", marginBottom: "4px" }}>
+    <Text
+      style={{
+        color: "#fff",
+        display: "block",
+        marginBottom: "4px",
+        fontFamily: "var(--font-secondary)",
+      }}
+    >
       {mainText}
     </Text>
     {subText && (
-      <Text type="secondary" style={{ color: "#8c8c8c", display: "block" }}>
+      <Text
+        type="secondary"
+        style={{
+          color: "#8c8c8c",
+          display: "block",
+          fontFamily: "var(--font-secondary)",
+        }}
+      >
         <CompassOutlined /> {subText}
       </Text>
     )}
@@ -72,7 +91,10 @@ const FlightDetailsDisplay = ({
   return (
     <Card
       title={
-        <Title level={4} style={{ color: "#fff", margin: 0 }}>
+        <Title
+          level={4}
+          style={{ color: "#fff", margin: 0, fontFamily: "var(--font-accent)" }}
+        >
           Flight Details
         </Title>
       }

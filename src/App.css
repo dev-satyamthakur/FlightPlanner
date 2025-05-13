@@ -36,3 +36,10 @@
 .right-column {
   padding-left: 10px;
 }
+
+.accent-text {
+  font-family: var(--font-accent);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 500;
+}

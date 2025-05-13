@@ -17,7 +17,10 @@ export default function FlightTipsCard({
   return (
     <Card
       title={
-        <Title level={4} style={{ color: "#fff", margin: 0 }}>
+        <Title
+          level={4}
+          style={{ color: "#fff", margin: 0, fontFamily: "var(--font-accent)" }}
+        >
           Flight Tips
         </Title>
       }
@@ -60,6 +63,7 @@ export default function FlightTipsCard({
                   color: "#1890ff",
                   display: "block",
                   marginBottom: "8px",
+                  fontFamily: "var(--font-primary)",
                 }}
               >
                 Seat Recommendations
@@ -133,6 +137,7 @@ export default function FlightTipsCard({
                     color: "#faad14",
                     margin: 0,
                     marginBottom: "8px",
+                    fontFamily: "var(--font-accent)",
                   }}
                 >
                   <WiSunrise
@@ -209,6 +214,7 @@ export default function FlightTipsCard({
                     color: "#1890ff",
                     margin: 0,
                     marginBottom: "8px",
+                    fontFamily: "var(--font-accent)",
                   }}
                 >
                   <WiSunset

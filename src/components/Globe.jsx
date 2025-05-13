@@ -512,8 +512,8 @@ export default function GlobeApp({
   const [isPlaying, setIsPlaying] = useState(false);
   const animationRef = useRef();
   const lastTimestampRef = useRef();
-  // Add performance mode toggle
-  const [performanceMode, setPerformanceMode] = useState(false);
+  // Set performance mode to true by default for best performance
+  const [performanceMode] = useState(true);
 
   // Animation effect
   useEffect(() => {
@@ -607,27 +607,6 @@ export default function GlobeApp({
   return (
     <ErrorBoundary>
       <div style={{ width: "100%", height: "100%", position: "relative" }}>
-        {/* Performance mode toggle button */}
-        <button
-          onClick={() => setPerformanceMode((m) => !m)}
-          style={{
-            position: "absolute",
-            top: 70,
-            right: 30,
-            zIndex: 1100,
-            background: performanceMode ? "#faad14" : "#222",
-            color: performanceMode ? "#222" : "#fff",
-            border: "1px solid #faad14",
-            borderRadius: 8,
-            padding: "6px 16px",
-            fontWeight: 600,
-            cursor: "pointer",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            transition: "all 0.2s",
-          }}
-        >
-          {performanceMode ? "Performance: ON" : "Performance: OFF"}
-        </button>
         {/* Progress bar with play/pause button outside the Canvas */}
         <div
           style={{

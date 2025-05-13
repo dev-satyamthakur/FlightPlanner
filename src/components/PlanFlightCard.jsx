@@ -21,7 +21,10 @@ export default function PlanFlightCard({
   return (
     <Card
       title={
-        <Title level={4} style={{ color: "#fff", margin: 0 }}>
+        <Title
+          level={4}
+          style={{ color: "#fff", margin: 0, fontFamily: "var(--font-accent)" }}
+        >
           Plan Your Flight
         </Title>
       }
@@ -53,6 +56,7 @@ export default function PlanFlightCard({
                 color: "white",
                 fontSize: "14px",
                 marginBottom: "4px",
+                fontFamily: "var(--font-primary)",
               }}
             >
               Source Airport
@@ -81,6 +85,7 @@ export default function PlanFlightCard({
                 color: "white",
                 fontSize: "14px",
                 marginBottom: "4px",
+                fontFamily: "var(--font-primary)",
               }}
             >
               Destination Airport
@@ -109,6 +114,7 @@ export default function PlanFlightCard({
                 color: "white",
                 fontSize: "14px",
                 marginBottom: "4px",
+                fontFamily: "var(--font-primary)",
               }}
             >
               <CalendarOutlined /> Departure Time
@@ -131,6 +137,7 @@ export default function PlanFlightCard({
                 color: "white",
                 fontSize: "14px",
                 marginBottom: "4px",
+                fontFamily: "var(--font-primary)",
               }}
             >
               <HourglassOutlined /> Flight Duration
