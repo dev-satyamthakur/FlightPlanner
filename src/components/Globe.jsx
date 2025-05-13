@@ -122,10 +122,14 @@ class GreatCircleCurve extends THREE.Curve {
   }
 }
 
+// --- Quality Settings ---
+// Set to true for ultra quality, false for default (can add a UI toggle later)
+const ultraQuality = true;
+
 function Atmosphere({ performanceMode }) {
-  // Reduce geometry segments if performanceMode is true
-  const segments = performanceMode ? 16 : 64;
-  const segmentsOuter = performanceMode ? 16 : 32;
+  // Ultra quality: 128/64 segments, else 64/32, else perf: 16/16
+  const segments = ultraQuality ? 128 : performanceMode ? 16 : 64;
+  const segmentsOuter = ultraQuality ? 64 : performanceMode ? 16 : 32;
   return (
     <>
       <mesh>
@@ -340,17 +344,17 @@ function Globe({
   const cloudTexture = useLoader(THREE.TextureLoader, "/fair_clouds.jpg");
 
   // Memoize geometry segment counts
-  const globeSegments = performanceMode ? 24 : 64;
-  const cloudSegments = performanceMode ? 24 : 64;
-  const citySegments = performanceMode ? 8 : 16;
+  const globeSegments = ultraQuality ? 256 : performanceMode ? 24 : 64;
+  const cloudSegments = ultraQuality ? 128 : performanceMode ? 24 : 64;
+  const citySegments = ultraQuality ? 64 : performanceMode ? 8 : 16;
   // Memoize curve and geometry
   const curve = useGreatCircleCurve(pointA, pointB);
   const flightPath = useMemo(() => {
     if (!curve) return null;
-    // Reduce tube geometry segments if performanceMode
-    const tubeSegments = performanceMode ? 40 : 150;
-    const tubeRadius = performanceMode ? 0.012 : 0.008;
-    const tubeRadialSegments = performanceMode ? 4 : 8;
+    // Ultra quality: 300 segments, 16 radial, else 150/8, else perf: 40/4
+    const tubeSegments = ultraQuality ? 300 : performanceMode ? 40 : 150;
+    const tubeRadius = ultraQuality ? 0.006 : performanceMode ? 0.012 : 0.008;
+    const tubeRadialSegments = ultraQuality ? 16 : performanceMode ? 4 : 8;
     const tubeGeometry = new THREE.TubeGeometry(
       curve,
       tubeSegments,
