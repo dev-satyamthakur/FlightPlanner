@@ -28,7 +28,6 @@ import {
   calculateSunViewingWindows,
   getLocationName,
 } from "./utils/sunTimingCalculator";
-import PropTypes from "prop-types";
 
 const { Title } = Typography;
 
@@ -229,6 +228,7 @@ export default function App() {
                     )}`,
                 }
               }
+              totalFlightTime={totalFlightDuration()}
             />
           </Suspense>
         </motion.div>
@@ -330,29 +330,3 @@ export default function App() {
     </Suspense>
   );
 }
-
-App.propTypes = {
-  source: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    icao: PropTypes.string.isRequired,
-    city: PropTypes.string.isRequired,
-    state: PropTypes.string,
-    country: PropTypes.string.isRequired,
-    lat: PropTypes.number.isRequired,
-    lon: PropTypes.number.isRequired,
-  }).isRequired,
-  destination: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    icao: PropTypes.string.isRequired,
-    city: PropTypes.string.isRequired,
-    state: PropTypes.string,
-    country: PropTypes.string.isRequired,
-    lat: PropTypes.number.isRequired,
-    lon: PropTypes.number.isRequired,
-  }).isRequired,
-  departureTime: PropTypes.string.isRequired,
-  flightHours: PropTypes.string.isRequired,
-  flightMinutes: PropTypes.string.isRequired,
-  viewingWindows: PropTypes.object,
-  locationNames: PropTypes.object.isRequired,
-};

@@ -11,7 +11,11 @@ import * as THREE from "three";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader";
 import { Spin } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
+import {
+  LoadingOutlined,
+  PauseOutlined,
+  CaretRightOutlined,
+} from "@ant-design/icons";
 
 // Extend the THREE namespace to include custom loaders
 extend({ OBJLoader, MTLLoader });
@@ -267,7 +271,6 @@ function Globe({
   const planeRef = useRef();
   const pathGroupRef = useRef();
   const [curve, setCurve] = useState(null);
-  const [startTime, setStartTime] = useState(null);
   const [flightPath, setFlightPath] = useState(null);
   const texture = useLoader(THREE.TextureLoader, "/earth.jpg");
   const cloudTexture = useLoader(THREE.TextureLoader, "/fair_clouds.jpg");
@@ -281,7 +284,6 @@ function Globe({
       const endVec = latLonToVector3(pointB.lat, pointB.lon, radius);
       const greatCircle = new GreatCircleCurve(startVec, endVec, radius);
       setCurve(greatCircle);
-      setStartTime(performance.now());
 
       const points = greatCircle.getPoints(150);
       const geometry = new THREE.BufferGeometry().setFromPoints(points);
@@ -303,7 +305,6 @@ function Globe({
       setFlightPath(tube);
     } else {
       setCurve(null);
-      setStartTime(null);
       setFlightPath(null);
     }
   }, [pointA, pointB]);
@@ -351,12 +352,10 @@ function Globe({
       }
     }
 
-    if (curve && planeRef.current && startTime) {
-      const duration = totalFlightTime * 1000;
-      const elapsed = (performance.now() - startTime) % duration;
-      const t = progress || elapsed / duration;
-
-      // Get current position and look-ahead position
+    // Update plane position based on progress prop
+    if (curve && planeRef.current && progress !== undefined) {
+      // Get current position and look-ahead position using the progress value
+      const t = Math.max(0, Math.min(1, progress)); // Clamp between 0 and 1
       const position = curve.getPoint(t);
       const nextT = Math.min(t + 0.01, 1);
       const nextPosition = curve.getPoint(nextT);
@@ -497,35 +496,224 @@ export default function GlobeApp({
   totalFlightTime,
 }) {
   const [progress, setProgress] = useState(0);
+  const [isUserScrubbing, setIsUserScrubbing] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const animationRef = useRef();
+  const lastTimestampRef = useRef();
+
+  // Animation effect
+  useEffect(() => {
+    if (!pointA || !pointB || !totalFlightTime || totalFlightTime <= 0) return;
+    if (isUserScrubbing || !isPlaying) return;
+
+    // Calculate animation duration based on flight duration
+    // Scale it so shorter flights take ~15 seconds, longer flights take ~20 seconds
+    const MIN_ANIMATION_DURATION = 15; // seconds
+    const MAX_ANIMATION_DURATION = 20; // seconds
+
+    // Use a logarithmic scale to determine animation duration
+    // Short flights (under 2 hours) -> closer to 15 seconds
+    // Long flights (8+ hours) -> closer to 20 seconds
+    const SHORT_FLIGHT = 120; // 2 hours in minutes
+    const LONG_FLIGHT = 480; // 8 hours in minutes
+
+    // Calculate animation duration within our desired range
+    let animationDuration = MIN_ANIMATION_DURATION;
+    if (totalFlightTime > SHORT_FLIGHT) {
+      // Scale logarithmically between MIN and MAX duration
+      const scale = Math.log(totalFlightTime) / Math.log(LONG_FLIGHT);
+      const scaledDuration =
+        MIN_ANIMATION_DURATION +
+        (MAX_ANIMATION_DURATION - MIN_ANIMATION_DURATION) * Math.min(1, scale);
+      animationDuration = scaledDuration;
+    }
+
+    function animate(timestamp) {
+      if (!lastTimestampRef.current) lastTimestampRef.current = timestamp;
+      const elapsed = (timestamp - lastTimestampRef.current) / 1000; // seconds
+      lastTimestampRef.current = timestamp;
+      setProgress((prev) => {
+        let next = prev + elapsed / animationDuration;
+        if (next >= 1) {
+          // Stop at the end instead of looping
+          cancelAnimationFrame(animationRef.current);
+          setIsPlaying(false);
+          return 1;
+        }
+        return next;
+      });
+      animationRef.current = requestAnimationFrame(animate);
+    }
+    animationRef.current = requestAnimationFrame(animate);
+    return () => {
+      cancelAnimationFrame(animationRef.current);
+      lastTimestampRef.current = null;
+    };
+  }, [isUserScrubbing, isPlaying, totalFlightTime, pointA, pointB]);
+
+  // Handlers for slider interaction
+  const handleSliderChange = (e) => {
+    setProgress(parseFloat(e.target.value));
+  };
+
+  const handleSliderStart = () => setIsUserScrubbing(true);
+
+  const handleSliderEnd = () => {
+    setIsUserScrubbing(false);
+    // If we were at the end and now user moved back, enable play again
+    if (progress < 0.99 && !isPlaying) {
+      setIsPlaying(true);
+    }
+  };
+
+  // Play/Pause toggle with enhanced behavior
+  const handlePlayPause = () => {
+    const newPlayingState = !isPlaying;
+    setIsPlaying(newPlayingState);
+
+    // If resuming from end, start from beginning
+    if (newPlayingState && progress >= 0.99) {
+      setProgress(0);
+    }
+  };
+
+  // Reset progress to 0 when starting from beginning
+  useEffect(() => {
+    if (isPlaying && progress === 1) {
+      setProgress(0);
+    }
+  }, [isPlaying, progress]);
+
+  // Auto-play when route is set
+  useEffect(() => {
+    if (pointA && pointB) {
+      setProgress(0); // Reset progress to start
+      setIsPlaying(true); // Auto-start playback
+    }
+  }, [pointA, pointB]);
 
   return (
     <ErrorBoundary>
       <div style={{ width: "100%", height: "100%", position: "relative" }}>
-        {/* Progress bar outside the Canvas */}
+        {/* Progress bar with play/pause button outside the Canvas */}
         <div
           style={{
             position: "absolute",
             top: "20px",
             left: "50%",
             transform: "translateX(-50%)",
-            width: "40%",
+            width: "38%",
             zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(10px)",
+            borderRadius: "24px",
+            padding: "8px 14px",
+            border: "0.5px solid rgba(0, 170, 255, 0.25)",
+            boxShadow:
+              "0 4px 16px rgba(0, 0, 0, 0.3), 0 0 4px rgba(0, 120, 255, 0.1)",
           }}
         >
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={progress}
-            onChange={(e) => setProgress(parseFloat(e.target.value))}
+          <div
+            onClick={handlePlayPause}
             style={{
-              width: "100%",
-              backgroundColor: "rgba(255, 255, 255, 0.2)",
-              borderRadius: "5px",
-              padding: "5px",
+              background: isPlaying
+                ? "rgba(255, 77, 79, 0.75)"
+                : "rgba(0, 170, 255, 0.75)",
+              border: "none",
+              borderRadius: "50%",
+              width: "28px",
+              height: "28px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              cursor: "pointer",
+              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.3)",
+              transition: "all 0.2s ease",
+              outline: "none",
+              flexShrink: 0,
             }}
-          />
+            aria-label={isPlaying ? "Pause animation" : "Play animation"}
+          >
+            {isPlaying ? (
+              <PauseOutlined style={{ color: "white", fontSize: "12px" }} />
+            ) : (
+              <CaretRightOutlined
+                style={{ color: "white", fontSize: "12px" }}
+              />
+            )}
+          </div>
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "22px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                left: "0",
+                height: "2px",
+                width: `${progress * 100}%`,
+                background: "linear-gradient(90deg, #1890ff, #00AAFF)",
+                borderRadius: "2px",
+                zIndex: 1,
+                boxShadow: "0 0 4px rgba(0, 170, 255, 0.7)",
+              }}
+            />
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.001"
+              value={progress}
+              onChange={handleSliderChange}
+              onMouseDown={handleSliderStart}
+              onMouseUp={handleSliderEnd}
+              onTouchStart={handleSliderStart}
+              onTouchEnd={handleSliderEnd}
+              style={{
+                width: "100%",
+                opacity: "0",
+                position: "absolute",
+                zIndex: 2,
+                cursor: "pointer",
+                height: "100%",
+                margin: "0",
+                padding: "0",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: "0",
+                height: "2px",
+                width: "100%",
+                background: "rgba(255, 255, 255, 0.1)",
+                borderRadius: "2px",
+                zIndex: 0,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: `${progress * 100}%`,
+                transform: "translateX(-50%)",
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "#1890ff",
+                boxShadow: "0 0 5px rgba(24, 144, 255, 0.9)",
+                zIndex: 3,
+                pointerEvents: "none",
+              }}
+            />
+          </div>
         </div>
 
         <div style={{ width: "100%", height: "100%", background: "black" }}>
@@ -540,7 +728,7 @@ export default function GlobeApp({
                 pointA={pointA}
                 pointB={pointB}
                 departureTime={departureTime}
-                totalFlightTime={totalFlightTime}
+                totalFlightTime={totalFlightTime || 120}
                 progress={progress}
                 onProgressChange={setProgress}
               />
