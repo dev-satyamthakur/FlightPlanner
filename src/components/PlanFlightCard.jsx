@@ -34,12 +34,9 @@ export default function PlanFlightCard({
         height: "fit-content",
         marginBottom: "10px",
       }}
-      headStyle={{
-        borderColor: "#303030",
-        padding: "12px 16px",
-      }}
-      bodyStyle={{
-        padding: "16px",
+      styles={{
+        header: { borderColor: "#303030", padding: "12px 16px" },
+        body: { padding: "16px" },
       }}
     >
       <Form

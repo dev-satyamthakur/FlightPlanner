@@ -18,12 +18,9 @@ export default function GeneralTipsCard() {
         borderRadius: "15px",
         height: "fit-content",
       }}
-      headStyle={{
-        borderColor: "#303030",
-        padding: "12px 16px",
-      }}
-      bodyStyle={{
-        padding: "16px",
+      styles={{
+        header: { borderColor: "#303030", padding: "12px 16px" },
+        body: { padding: "16px" },
       }}
     >
       <ul style={{ listStyle: "disc", paddingLeft: "20px", margin: 0 }}>

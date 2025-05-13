@@ -77,8 +77,7 @@ const FlightDetailsDisplay = ({
         </Title>
       }
       style={cardStyle}
-      headStyle={headStyle}
-      bodyStyle={bodyStyle}
+      styles={{ header: headStyle, body: bodyStyle }}
     >
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <DetailSection

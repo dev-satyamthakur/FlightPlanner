@@ -129,7 +129,6 @@ const LazyAirportSearch = ({ onSelect, excludeIcao }) => {
       value={query}
       placeholder="Search for an airport..."
       notFoundContent={null}
-      showArrow={false}
       filterOption={false}
       onSearch={handleChange}
       onChange={handleSelect}
