@@ -1,6 +1,11 @@
 import React, { Suspense } from "react";
 import { Card, Form, Typography, DatePicker, Space, InputNumber } from "antd";
-import { CalendarOutlined, HourglassOutlined } from "@ant-design/icons";
+import {
+  CalendarOutlined,
+  HourglassOutlined,
+  RocketOutlined,
+  EnvironmentOutlined,
+} from "@ant-design/icons";
 
 const { Title } = Typography;
 const AirportSearchInput = React.lazy(() => import("./AirportSearchInput"));
@@ -59,7 +64,7 @@ export default function PlanFlightCard({
                 fontFamily: "var(--font-primary)",
               }}
             >
-              Source Airport
+              <RocketOutlined /> Source Airport
             </Typography.Text>
           }
           name="source"
@@ -88,7 +93,7 @@ export default function PlanFlightCard({
                 fontFamily: "var(--font-primary)",
               }}
             >
-              Destination Airport
+              <EnvironmentOutlined /> Destination Airport
             </Typography.Text>
           }
           name="destination"
