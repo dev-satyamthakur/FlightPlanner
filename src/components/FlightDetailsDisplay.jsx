@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useState } from "react";
 import PropTypes from "prop-types";
 import { Card, Typography, Space } from "antd";
 import {
@@ -6,6 +6,7 @@ import {
   ClockCircleOutlined,
   FieldTimeOutlined,
   CompassOutlined,
+  CaretRightOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
@@ -81,6 +82,39 @@ const FlightDetailsDisplay = ({
   flightHours,
   flightMinutes,
 }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const cardTitle = (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        cursor: "pointer",
+      }}
+      onClick={() => setIsExpanded(!isExpanded)}
+    >
+      <CaretRightOutlined
+        rotate={isExpanded ? 90 : 0}
+        style={{
+          marginRight: "8px",
+          transition: "all 0.3s",
+          color: "#fff",
+        }}
+      />
+      <Title
+        level={4}
+        style={{
+          color: "#fff",
+          margin: 0,
+          fontFamily: "var(--font-accent)",
+          cursor: "pointer",
+        }}
+      >
+        Flight Details
+      </Title>
+    </div>
+  );
+
   const formatDuration = () => {
     const parts = [];
     if (flightHours) parts.push(`${flightHours} hours`);
@@ -90,49 +124,76 @@ const FlightDetailsDisplay = ({
 
   return (
     <Card
-      title={
-        <Title
-          level={4}
-          style={{ color: "#fff", margin: 0, fontFamily: "var(--font-accent)" }}
-        >
-          Flight Details
-        </Title>
-      }
-      style={cardStyle}
-      styles={{ header: headStyle, body: bodyStyle }}
+      title={cardTitle}
+      style={{
+        background: "rgba(0, 0, 0, 0.5)",
+        backdropFilter: "blur(10px)",
+        borderColor: "#303030",
+        color: "#fff",
+        borderRadius: "15px",
+        height: "fit-content",
+        marginBottom: "10px",
+        overflow: "hidden",
+      }}
+      styles={{
+        header: {
+          borderColor: isExpanded ? "#303030" : "transparent",
+          padding: "12px 16px",
+          cursor: "pointer",
+          borderBottomWidth: isExpanded ? "1px" : "0px",
+          transition:
+            "border-color 0.3s ease-in-out, border-bottom-width 0.3s ease-in-out",
+        },
+        body: {
+          padding: "0 16px",
+          maxHeight: isExpanded ? "2000px" : "0",
+          opacity: isExpanded ? 1 : 0,
+          overflow: "hidden",
+          transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+        },
+      }}
     >
-      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-        <DetailSection
-          icon={<EnvironmentOutlined />}
-          title="Source City"
-          mainText={`${
-            source.city + ", " + source.state + ", " + source.country
-          } (${source.icao})`}
-          subText={`[${source.lat}, ${source.lon}]`}
-        />
-        <DetailSection
-          icon={<EnvironmentOutlined />}
-          title="Destination"
-          mainText={`${
-            destination.city +
-            ", " +
-            destination.state +
-            ", " +
-            destination.country
-          } (${destination.icao})`}
-          subText={`[${destination.lat}, ${destination.lon}]`}
-        />
-        <DetailSection
-          icon={<ClockCircleOutlined />}
-          title="Departure"
-          mainText={new Date(departureTime).toLocaleString()}
-        />
-        <DetailSection
-          icon={<FieldTimeOutlined />}
-          title="Duration"
-          mainText={formatDuration()}
-        />
-      </Space>
+      <div
+        style={{
+          transform: `translateY(${isExpanded ? "0" : "-20px"})`,
+          opacity: isExpanded ? 1 : 0,
+          transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+          padding: isExpanded ? "16px 0" : "0",
+        }}
+      >
+        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+          <DetailSection
+            icon={<EnvironmentOutlined />}
+            title="Source City"
+            mainText={`${
+              source.city + ", " + source.state + ", " + source.country
+            } (${source.icao})`}
+            subText={`[${source.lat}, ${source.lon}]`}
+          />
+          <DetailSection
+            icon={<EnvironmentOutlined />}
+            title="Destination"
+            mainText={`${
+              destination.city +
+              ", " +
+              destination.state +
+              ", " +
+              destination.country
+            } (${destination.icao})`}
+            subText={`[${destination.lat}, ${destination.lon}]`}
+          />
+          <DetailSection
+            icon={<ClockCircleOutlined />}
+            title="Departure"
+            mainText={new Date(departureTime).toLocaleString()}
+          />
+          <DetailSection
+            icon={<FieldTimeOutlined />}
+            title="Duration"
+            mainText={formatDuration()}
+          />
+        </Space>
+      </div>
     </Card>
   );
 };
