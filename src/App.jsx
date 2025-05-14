@@ -20,6 +20,7 @@ import PlanFlightCard from "./components/PlanFlightCard";
 import FlightDetailsCard from "./components/FlightDetailsCard";
 import FlightTipsCard from "./components/FlightTipsCard";
 import GeneralTipsCard from "./components/GeneralTipsCard";
+import WeatherCard from "./components/WeatherCard";
 const AirportSearchInput = lazy(() =>
   import("./components/AirportSearchInput")
 );
@@ -303,6 +304,17 @@ export default function App() {
             animate="animate"
             exit="exit"
           >
+            {/* Weather Information Card */}
+            <motion.div layout>
+              <WeatherCard
+                source={source}
+                destination={destination}
+                departureTime={departureTime}
+                flightHours={flightHours}
+                flightMinutes={flightMinutes}
+              />
+            </motion.div>
+
             {/* Viewing Opportunities Card */}
             <motion.div layout>
               <FlightTipsCard
