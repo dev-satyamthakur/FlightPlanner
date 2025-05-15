@@ -128,6 +128,7 @@ export default function PlanFlightCard({
               <AirportSearchInput
                 onSelect={setSource}
                 excludeIcao={destination?.icao}
+                value={source}
               />
             </Suspense>
           </Form.Item>
@@ -157,6 +158,7 @@ export default function PlanFlightCard({
               <AirportSearchInput
                 onSelect={setDestination}
                 excludeIcao={source?.icao}
+                value={destination}
               />
             </Suspense>
           </Form.Item>
@@ -200,22 +202,34 @@ export default function PlanFlightCard({
             required
             style={{ marginBottom: "0" }}
           >
-            <Space style={{ width: "100%" }}>
+            <Space style={{ width: "100%" }} align="baseline">
               <InputNumber
                 min={0}
                 value={flightHours}
                 onChange={setFlightHours}
                 placeholder="Hours"
-                style={{ width: "100%" }}
+                style={{ flex: 1 }}
               />
+              <Typography.Text
+                style={{
+                  color: "white",
+                  marginLeft: "4px",
+                  marginRight: "8px",
+                }}
+              >
+                hrs
+              </Typography.Text>
               <InputNumber
                 min={0}
                 max={59}
                 value={flightMinutes}
                 onChange={setFlightMinutes}
                 placeholder="Minutes"
-                style={{ width: "100%" }}
+                style={{ flex: 1 }}
               />
+              <Typography.Text style={{ color: "white", marginLeft: "4px" }}>
+                mins
+              </Typography.Text>
             </Space>
           </Form.Item>
         </Form>

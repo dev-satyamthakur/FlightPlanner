@@ -36,7 +36,7 @@ AirportOption.propTypes = {
   }).isRequired,
 };
 
-const LazyAirportSearch = ({ onSelect, excludeIcao }) => {
+const LazyAirportSearch = ({ onSelect, excludeIcao, value }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -87,6 +87,16 @@ const LazyAirportSearch = ({ onSelect, excludeIcao }) => {
   useEffect(() => {
     return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (value) {
+      setQuery(
+        `${value.name} (${value.icao}${value.iata ? "/" + value.iata : ""})`
+      );
+    } else {
+      setQuery(""); // Clear query if value is null (e.g., after a swap to an unselected field)
+    }
+  }, [value]);
 
   const handleChange = useCallback(
     (value) => {
@@ -153,6 +163,7 @@ const LazyAirportSearch = ({ onSelect, excludeIcao }) => {
 LazyAirportSearch.propTypes = {
   onSelect: PropTypes.func.isRequired,
   excludeIcao: PropTypes.string,
+  value: PropTypes.object,
 };
 
 export default memo(LazyAirportSearch);
