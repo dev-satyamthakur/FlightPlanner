@@ -314,26 +314,6 @@ export default function App() {
               />
             </motion.div>
 
-            {/* Flight Details Card */}
-            <FlightDetailsCard
-              source={source}
-              destination={destination}
-              departureTime={departureTime}
-              flightHours={flightHours}
-              flightMinutes={flightMinutes}
-              totalFlightDuration={totalFlightDuration}
-              animations={animations}
-            />
-          </motion.div>
-
-          {/* Right Column - Flight Tips */}
-          <motion.div
-            className="scrollable-column right-column"
-            variants={animations.fadeInUp}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-          >
             {/* Weather Information Card */}
             <motion.div layout>
               <WeatherCard
@@ -345,6 +325,26 @@ export default function App() {
               />
             </motion.div>
 
+            {/* Flight Details Card */}
+            {/* <FlightDetailsCard
+              source={source}
+              destination={destination}
+              departureTime={departureTime}
+              flightHours={flightHours}
+              flightMinutes={flightMinutes}
+              totalFlightDuration={totalFlightDuration}
+              animations={animations}
+            /> */}
+          </motion.div>
+
+          {/* Right Column - Flight Tips */}
+          <motion.div
+            className="scrollable-column right-column"
+            variants={animations.fadeInUp}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+          >
             {/* Viewing Opportunities Card */}
             <motion.div layout>
               <FlightTipsCard
