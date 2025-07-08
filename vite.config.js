@@ -9,4 +9,14 @@ export default defineConfig({
     host: "0.0.0.0", // Allow external connections
     port: 5173,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          cesium: ["cesium"],
+          three: ["three"],
+        },
+      },
+    },
+  },
 });

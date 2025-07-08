@@ -1,4 +1,9 @@
 import SunCalc from "suncalc";
+import {
+  lineString,
+  length as turfLength,
+  along as turfAlong,
+} from "@turf/turf";
 
 export const calculateSunViewingWindows = (
   source,
@@ -6,20 +11,25 @@ export const calculateSunViewingWindows = (
   departureTime,
   flightDuration
 ) => {
-  // Create points along the flight path (one point every 5 minutes)
+  // Create points along the great circle flight path (one point every 5 minutes)
   const totalPoints = Math.floor(flightDuration / 5);
   const viewingWindows = {
     sunrise: { start: null, end: null },
     sunset: { start: null, end: null },
   };
 
-  // Calculate the great circle path
-  const points = [];
+  // Use turf to create a great circle lineString
+  const line = lineString([
+    [source[1], source[0]], // [lon, lat]
+    [destination[1], destination[0]],
+  ]);
+  const totalDistance = turfLength(line, { units: "kilometers" });
+
   for (let i = 0; i <= totalPoints; i++) {
     const fraction = i / totalPoints;
-    // Linear interpolation between source and destination
-    const lat = source[0] + (destination[0] - source[0]) * fraction;
-    const lon = source[1] + (destination[1] - source[1]) * fraction;
+    const distance = totalDistance * fraction;
+    const point = turfAlong(line, distance, { units: "kilometers" });
+    const [lon, lat] = point.geometry.coordinates;
     const timeAtPoint = new Date(departureTime.getTime() + i * 5 * 60000); // 5 minutes intervals
 
     const sunTimes = SunCalc.getTimes(timeAtPoint, lat, lon);

@@ -1,102 +1,169 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import airportsData from "../data/airports.json";
-import Fuse from "fuse.js";
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  memo,
+  Suspense,
+} from "react";
+import PropTypes from "prop-types";
 import debounce from "lodash.debounce";
+import { Input, Select, Typography, Spin } from "antd";
+import { SearchOutlined, EnvironmentOutlined } from "@ant-design/icons";
 
-const airportsArray = Object.values(airportsData);
-const fuseOptions = {
-  keys: ["icao", "iata", "name", "city", "country"],
-  threshold: 0.3,
+const { Option } = Select;
+const { Text } = Typography;
+
+const AirportOption = memo(({ airport }) => (
+  <div style={{ display: "flex", flexDirection: "column" }}>
+    <Text strong>
+      {airport.name} ({airport.icao}
+      {airport.iata && `/${airport.iata}`})
+    </Text>
+    <Text type="secondary">
+      <EnvironmentOutlined /> {airport.city}, {airport.country}
+    </Text>
+  </div>
+));
+
+AirportOption.propTypes = {
+  airport: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    icao: PropTypes.string.isRequired,
+    iata: PropTypes.string,
+    city: PropTypes.string.isRequired,
+    country: PropTypes.string.isRequired,
+  }).isRequired,
 };
 
-export default function AirportSearchInput({ label, onSelect, excludeIcao }) {
+const LazyAirportSearch = ({ onSelect, excludeIcao, value }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
-  const fuse = useRef(new Fuse(airportsArray, fuseOptions)).current;
+  const [loading, setLoading] = useState(false);
+  const [airportsArray, setAirportsArray] = useState(null);
+  const fuseRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([import("../data/airports.json"), import("fuse.js")]).then(
+      ([airportsData, Fuse]) => {
+        if (isMounted) {
+          setAirportsArray(Object.values(airportsData.default || airportsData));
+          fuseRef.current = new Fuse.default(
+            Object.values(airportsData.default || airportsData),
+            {
+              keys: ["icao", "iata", "name", "city", "country"],
+              threshold: 0.3,
+            }
+          );
+        }
+      }
+    );
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const debouncedSearch = useCallback(
     debounce((value) => {
-      let filtered = value ? fuse.search(value).map((r) => r.item) : [];
+      setLoading(true);
+      if (!fuseRef.current) {
+        setResults([]);
+        setLoading(false);
+        return;
+      }
+      let filtered = value
+        ? fuseRef.current.search(value).map((r) => r.item)
+        : [];
       if (excludeIcao) {
         filtered = filtered.filter((a) => a.icao !== excludeIcao);
       }
       setResults(filtered.slice(0, 10));
+      setLoading(false);
     }, 300),
-    [fuse, excludeIcao]
+    [excludeIcao]
   );
 
   useEffect(() => {
     return () => debouncedSearch.cancel();
   }, [debouncedSearch]);
 
-  const handleChange = (e) => {
-    const value = e.target.value;
-    setQuery(value);
-    debouncedSearch(value);
-  };
+  useEffect(() => {
+    if (value) {
+      setQuery(
+        `${value.name} (${value.icao}${value.iata ? "/" + value.iata : ""})`
+      );
+    } else {
+      setQuery(""); // Clear query if value is null (e.g., after a swap to an unselected field)
+    }
+  }, [value]);
 
-  const handleSelect = (airport) => {
-    setQuery(
+  const handleChange = useCallback(
+    (value) => {
+      setQuery(value);
+      debouncedSearch(value);
+    },
+    [debouncedSearch]
+  );
+
+  const handleSelect = useCallback(
+    (value) => {
+      const airport = results.find((a) => a.icao === value);
+      if (airport) {
+        setQuery(
+          `${airport.name} (${airport.icao}${
+            airport.iata ? "/" + airport.iata : ""
+          })`
+        );
+        onSelect(airport);
+      }
+    },
+    [results, onSelect]
+  );
+
+  const getOptionLabel = useCallback(
+    (airport) =>
       `${airport.name} (${airport.icao}${
         airport.iata ? "/" + airport.iata : ""
-      })`
-    );
-    setResults([]);
-    onSelect(airport);
-  };
+      })`,
+    []
+  );
+
+  if (!airportsArray) {
+    return <Spin style={{ width: "100%" }} />;
+  }
 
   return (
-    <div style={{ marginBottom: "20px" }}>
-      <label style={{ display: "block", marginBottom: "5px" }}>{label}</label>
-      <input
-        type="text"
-        placeholder={`Search ${label.toLowerCase()}...`}
-        aria-label={label}
-        value={query}
-        onChange={handleChange}
-        autoComplete="off"
-        style={{
-          width: "100%",
-          padding: "8px",
-          marginBottom: "5px",
-          borderRadius: "4px",
-          border: "1px solid #ccc",
-        }}
-      />
-      {results.length > 0 && (
-        <ul
-          role="listbox"
-          style={{
-            listStyle: "none",
-            padding: 0,
-            margin: 0,
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            maxHeight: "200px",
-            overflowY: "auto",
-          }}
+    <Select
+      showSearch
+      value={query}
+      placeholder="Search for an airport..."
+      notFoundContent={null}
+      filterOption={false}
+      onSearch={handleChange}
+      onChange={handleSelect}
+      loading={loading}
+      style={{ width: "100%" }}
+      suffixIcon={<SearchOutlined />}
+      optionLabelProp="label"
+    >
+      {results.map((airport) => (
+        <Option
+          key={airport.icao}
+          value={airport.icao}
+          label={getOptionLabel(airport)}
         >
-          {results.map((airport) => (
-            <li
-              key={airport.icao}
-              role="option"
-              onClick={() => handleSelect(airport)}
-              style={{
-                padding: "8px",
-                cursor: "pointer",
-                borderBottom: "1px solid #eee",
-                ":hover": {
-                  backgroundColor: "#f0f0f0",
-                },
-              }}
-            >
-              {airport.name} ({airport.icao}
-              {airport.iata && `/${airport.iata}`}) - {airport.city},{" "}
-              {airport.country}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+          <AirportOption airport={airport} />
+        </Option>
+      ))}
+    </Select>
   );
-}
+};
+
+LazyAirportSearch.propTypes = {
+  onSelect: PropTypes.func.isRequired,
+  excludeIcao: PropTypes.string,
+  value: PropTypes.object,
+};
+
+export default memo(LazyAirportSearch);

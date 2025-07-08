@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, Suspense } from "react";
+import React, { useRef, useState, useEffect, useMemo, Suspense } from "react";
 import {
   Canvas,
   useFrame,
@@ -6,10 +6,22 @@ import {
   useThree,
   extend,
 } from "@react-three/fiber";
-import { OrbitControls, Text, Stars, Html } from "@react-three/drei";
+import {
+  OrbitControls,
+  Text,
+  Stars,
+  Html,
+  useProgress,
+} from "@react-three/drei";
 import * as THREE from "three";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader";
+import { Spin } from "antd";
+import {
+  LoadingOutlined,
+  PauseOutlined,
+  CaretRightOutlined,
+} from "@ant-design/icons";
 
 // Extend the THREE namespace to include custom loaders
 extend({ OBJLoader, MTLLoader });
@@ -33,11 +45,48 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Loading component
+// Enhanced LoadingScreen using useProgress
 function LoadingScreen() {
+  const { progress, active, errors, loaded, total } = useProgress();
   return (
     <Html center>
-      <div>Loading...</div>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          background: "rgba(20, 20, 20, 0.95)",
+          padding: "32px 48px",
+          borderRadius: "18px",
+          boxShadow: "0 4px 32px 0 rgba(0,0,0,0.4)",
+        }}
+      >
+        <Spin
+          indicator={
+            <LoadingOutlined style={{ fontSize: 48, color: "#1890ff" }} spin />
+          }
+          style={{ marginBottom: 18 }}
+        />
+        <div
+          style={{
+            color: "#fff",
+            fontWeight: 500,
+            fontSize: 18,
+            letterSpacing: 1,
+            marginBottom: 8,
+          }}
+        >
+          Loading... {Math.round(progress)}%
+        </div>
+        <div style={{ color: "#aaa", fontSize: 12 }}>
+          {loaded} / {total} assets
+        </div>
+        {errors.length > 0 && (
+          <div style={{ color: "#ff4d4f", fontSize: 14, marginTop: 8 }}>
+            Error loading: {errors.length} asset(s)
+          </div>
+        )}
+      </div>
     </Html>
   );
 }
@@ -73,11 +122,18 @@ class GreatCircleCurve extends THREE.Curve {
   }
 }
 
-function Atmosphere() {
+// --- Quality Settings ---
+// Set to true for ultra quality, false for default (can add a UI toggle later)
+const ultraQuality = true;
+
+function Atmosphere({ performanceMode }) {
+  // Ultra quality: 128/64 segments, else 64/32, else perf: 16/16
+  const segments = ultraQuality ? 128 : performanceMode ? 16 : 64;
+  const segmentsOuter = ultraQuality ? 64 : performanceMode ? 16 : 32;
   return (
     <>
       <mesh>
-        <sphereGeometry args={[1.02, 64, 64]} />
+        <sphereGeometry args={[1.02, segments, segments]} />
         <meshLambertMaterial
           color="#0066CC"
           opacity={0.3}
@@ -86,7 +142,7 @@ function Atmosphere() {
         />
       </mesh>
       <mesh>
-        <sphereGeometry args={[1.05, 64, 64]} />
+        <sphereGeometry args={[1.05, segments, segments]} />
         <meshLambertMaterial
           color="#00AAFF"
           opacity={0.15}
@@ -95,7 +151,7 @@ function Atmosphere() {
         />
       </mesh>
       <mesh>
-        <sphereGeometry args={[1.1, 32, 32]} />
+        <sphereGeometry args={[1.1, segmentsOuter, segmentsOuter]} />
         <meshLambertMaterial
           color="#80C4FF"
           opacity={0.05}
@@ -126,9 +182,9 @@ function CityLabel({ position, name, camera }) {
   });
 
   return (
-    <group ref={labelRef} position={position}>
+    <group ref={labelRef} position={position.clone().multiplyScalar(1.02)}>
       <Text
-        fontSize={0.05}
+        fontSize={0.03}
         color="white"
         anchorX="center"
         anchorY="middle"
@@ -142,8 +198,8 @@ function CityLabel({ position, name, camera }) {
   );
 }
 
-function Airplane() {
-  // Load all textures first
+// Custom hook to preload airplane assets
+function useAirplaneAssets() {
   const bodyTexture = useLoader(
     THREE.TextureLoader,
     "/11803_Airplane_body_diff.jpg"
@@ -168,43 +224,74 @@ function Airplane() {
     THREE.TextureLoader,
     "/11803_Airplane_wing_details_R_diff.jpg"
   );
-
-  // Load materials and object
   const materials = useLoader(MTLLoader, "/11803_Airplane_v1_l1.mtl");
   const obj = useLoader(OBJLoader, "/11803_Airplane_v1_l1.obj", (loader) => {
     materials.preload();
     loader.setMaterials(materials);
   });
 
-  useEffect(() => {
-    if (obj) {
-      obj.traverse((child) => {
-        if (child.isMesh) {
-          // Apply the correct texture based on the mesh name
-          if (child.name.includes("body")) {
-            child.material.map = bodyTexture;
-          } else if (child.name.includes("tail")) {
-            child.material.map = tailTexture;
-          } else if (child.name.includes("wing_big_L")) {
-            child.material.map = wingLeftTexture;
-          } else if (child.name.includes("wing_big_R")) {
-            child.material.map = wingRightTexture;
-          } else if (child.name.includes("wing_details_L")) {
-            child.material.map = wingDetailLeftTexture;
-          } else if (child.name.includes("wing_details_R")) {
-            child.material.map = wingDetailRightTexture;
-          }
+  return {
+    bodyTexture,
+    tailTexture,
+    wingLeftTexture,
+    wingRightTexture,
+    wingDetailLeftTexture,
+    wingDetailRightTexture,
+    materials,
+    obj,
+  };
+}
 
-          // Enhance material properties
-          child.material.metalness = 0.5;
-          child.material.roughness = 0.3;
-          child.material.emissive.set("#404040");
-          child.material.emissiveIntensity = 0.3;
-          child.material.color.set("#FFFFFF");
-          child.material.needsUpdate = true;
+function Airplane() {
+  // Use our custom hook to load all assets
+  const {
+    bodyTexture,
+    tailTexture,
+    wingLeftTexture,
+    wingRightTexture,
+    wingDetailLeftTexture,
+    wingDetailRightTexture,
+    materials,
+    obj,
+  } = useAirplaneAssets();
+
+  useEffect(() => {
+    if (
+      !obj ||
+      !bodyTexture ||
+      !tailTexture ||
+      !wingLeftTexture ||
+      !wingRightTexture ||
+      !wingDetailLeftTexture ||
+      !wingDetailRightTexture
+    )
+      return;
+    obj.traverse((child) => {
+      if (child.isMesh) {
+        // Apply the correct texture based on the mesh name
+        if (child.name.includes("body")) {
+          child.material.map = bodyTexture;
+        } else if (child.name.includes("tail")) {
+          child.material.map = tailTexture;
+        } else if (child.name.includes("wing_big_L")) {
+          child.material.map = wingLeftTexture;
+        } else if (child.name.includes("wing_big_R")) {
+          child.material.map = wingRightTexture;
+        } else if (child.name.includes("wing_details_L")) {
+          child.material.map = wingDetailLeftTexture;
+        } else if (child.name.includes("wing_details_R")) {
+          child.material.map = wingDetailRightTexture;
         }
-      });
-    }
+
+        // Enhance material properties
+        child.material.metalness = 0.5;
+        child.material.roughness = 0.3;
+        child.material.emissive.set("#404040");
+        child.material.emissiveIntensity = 0.3;
+        child.material.color.set("#FFFFFF");
+        child.material.needsUpdate = true;
+      }
+    });
   }, [
     obj,
     bodyTexture,
@@ -225,6 +312,18 @@ function Airplane() {
   );
 }
 
+const EARTH_Y_OFFSET = -0.25; // Adjust as needed for progress bar
+
+// Memoize expensive calculations
+function useGreatCircleCurve(pointA, pointB, radius = 1) {
+  return useMemo(() => {
+    if (!pointA || !pointB) return null;
+    const startVec = latLonToVector3(pointA.lat, pointA.lon, radius);
+    const endVec = latLonToVector3(pointB.lat, pointB.lon, radius);
+    return new GreatCircleCurve(startVec, endVec, radius);
+  }, [pointA, pointB, radius]);
+}
+
 function Globe({
   pointA,
   pointB,
@@ -232,103 +331,78 @@ function Globe({
   totalFlightTime,
   progress,
   onProgressChange,
+  performanceMode = false,
 }) {
   const globeRef = useRef();
+  const cloudMeshRef = useRef();
   const planeRef = useRef();
   const pathGroupRef = useRef();
-  const [curve, setCurve] = useState(null);
-  const [startTime, setStartTime] = useState(null);
-  const [flightPath, setFlightPath] = useState(null);
-  const texture = useLoader(THREE.TextureLoader, "/earth.jpg");
   const { camera } = useThree();
 
-  useEffect(() => {
-    if (pointA && pointB) {
-      const radius = 1;
-      const startVec = latLonToVector3(pointA.lat, pointA.lon, radius);
-      const endVec = latLonToVector3(pointB.lat, pointB.lon, radius);
-      const greatCircle = new GreatCircleCurve(startVec, endVec, radius);
-      setCurve(greatCircle);
-      setStartTime(performance.now());
+  // Use useLoader directly here
+  const earthTexture = useLoader(THREE.TextureLoader, "/earth.jpg");
+  const cloudTexture = useLoader(THREE.TextureLoader, "/fair_clouds.jpg");
 
-      const points = greatCircle.getPoints(150);
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const tubeGeometry = new THREE.TubeGeometry(
-        greatCircle,
-        150,
-        0.008,
-        8,
-        false
-      );
-      const material = new THREE.MeshStandardMaterial({
-        color: "#FFD700",
-        emissive: "#FF8C00",
-        emissiveIntensity: 0.5,
-        metalness: 0.7,
-        roughness: 0.3,
-      });
-      const tube = new THREE.Mesh(tubeGeometry, material);
-      setFlightPath(tube);
-    } else {
-      setCurve(null);
-      setStartTime(null);
-      setFlightPath(null);
-    }
-  }, [pointA, pointB]);
+  // Memoize geometry segment counts
+  const globeSegments = ultraQuality ? 256 : performanceMode ? 24 : 64;
+  const cloudSegments = ultraQuality ? 128 : performanceMode ? 24 : 64;
+  const citySegments = ultraQuality ? 64 : performanceMode ? 8 : 16;
+  // Memoize curve and geometry
+  const curve = useGreatCircleCurve(pointA, pointB);
+  const flightPath = useMemo(() => {
+    if (!curve) return null;
+    // Ultra quality: 300 segments, 16 radial, else 150/8, else perf: 40/4
+    const tubeSegments = ultraQuality ? 300 : performanceMode ? 40 : 150;
+    const tubeRadius = ultraQuality ? 0.006 : performanceMode ? 0.012 : 0.008;
+    const tubeRadialSegments = ultraQuality ? 16 : performanceMode ? 4 : 8;
+    const tubeGeometry = new THREE.TubeGeometry(
+      curve,
+      tubeSegments,
+      tubeRadius,
+      tubeRadialSegments,
+      false
+    );
+    const material = new THREE.MeshStandardMaterial({
+      color: "#FFD700",
+      emissive: "#FF8C00",
+      emissiveIntensity: 0.5,
+      metalness: 0.7,
+      roughness: 0.3,
+    });
+    return new THREE.Mesh(tubeGeometry, material);
+  }, [curve, performanceMode]);
 
   useFrame(({ clock }) => {
     if (globeRef.current) {
       globeRef.current.rotation.x = 23.4 * (Math.PI / 180);
-      const rotationY = clock.getElapsedTime() * 0.1;
-      globeRef.current.rotation.y = rotationY;
-
+      globeRef.current.rotation.y = clock.getElapsedTime() * 0.1;
+      if (cloudMeshRef.current) {
+        cloudMeshRef.current.rotation.y += 0.0002;
+        cloudMeshRef.current.rotation.x += 0.00005;
+      }
       if (pathGroupRef.current) {
         pathGroupRef.current.rotation.x = 23.4 * (Math.PI / 180);
-        pathGroupRef.current.rotation.y = rotationY;
+        pathGroupRef.current.rotation.y = clock.getElapsedTime() * 0.1;
       }
     }
-
-    if (curve && planeRef.current && startTime) {
-      const duration = totalFlightTime * 1000;
-      const elapsed = (performance.now() - startTime) % duration;
-      const t = progress || elapsed / duration;
-
-      // Get current position and look-ahead position
+    // Plane animation
+    if (curve && planeRef.current && typeof progress === "number") {
+      const t = Math.max(0, Math.min(1, progress));
       const position = curve.getPoint(t);
       const nextT = Math.min(t + 0.01, 1);
       const nextPosition = curve.getPoint(nextT);
-
-      // Position the plane slightly above the path
       planeRef.current.position.copy(position).multiplyScalar(1.02);
-
-      // Calculate the tangent (direction of movement)
       const tangent = nextPosition.clone().sub(position).normalize();
-
-      // Calculate the normal (pointing outward from globe)
       const normal = position.clone().normalize();
-
-      // Calculate the binormal (perpendicular to both tangent and normal)
       const binormal = new THREE.Vector3()
         .crossVectors(normal, tangent)
         .normalize();
-
-      // Create rotation matrix
       const rotationMatrix = new THREE.Matrix4().makeBasis(
-        tangent, // Forward direction (nose)
-        binormal, // Right direction (right wing)
-        normal // Up direction (top of plane)
-      );
-
-      // Apply the rotation
-      planeRef.current.quaternion.setFromRotationMatrix(rotationMatrix);
-
-      // Add banking effect during turns
-      const bankAngle = Math.PI / 24;
-      const turnRate = tangent.clone().cross(normal).length();
-      planeRef.current.rotateOnAxis(
         tangent,
-        -bankAngle * turnRate * Math.sin(t * Math.PI * 2) * 0.3
+        binormal,
+        normal
       );
+      planeRef.current.quaternion.setFromRotationMatrix(rotationMatrix);
     }
   });
 
@@ -339,25 +413,37 @@ function Globe({
     cities.push({ name: pointB.name, lat: pointB.lat, lon: pointB.lon });
 
   return (
-    <>
-      <group>
-        <mesh ref={globeRef}>
-          <sphereGeometry args={[1, 64, 64]} />
-          <meshStandardMaterial map={texture} metalness={0.1} roughness={0.8} />
+    <group position={[0, EARTH_Y_OFFSET, 0]}>
+      <group ref={globeRef}>
+        <mesh>
+          <sphereGeometry args={[1, globeSegments, globeSegments]} />
+          <meshStandardMaterial
+            map={earthTexture}
+            metalness={0.1}
+            roughness={0.8}
+          />
         </mesh>
-        <Atmosphere />
+        <mesh ref={cloudMeshRef}>
+          <sphereGeometry args={[1.015, cloudSegments, cloudSegments]} />
+          <meshStandardMaterial
+            map={cloudTexture}
+            alphaMap={cloudTexture}
+            transparent={true}
+            opacity={0.6}
+            depthWrite={false}
+          />
+        </mesh>
+        <Atmosphere performanceMode={performanceMode} />
       </group>
 
       <group ref={pathGroupRef}>
         {flightPath && <primitive object={flightPath} />}
 
-        {curve && planeRef && (
-          <group ref={planeRef}>
-            <Suspense fallback={null}>
-              <Airplane />
-            </Suspense>
-          </group>
-        )}
+        <group ref={planeRef} visible={!!curve}>
+          <Suspense fallback={null}>
+            <Airplane />
+          </Suspense>
+        </group>
 
         {cities.map((city) => {
           const position = latLonToVector3(city.lat, city.lon, 1.02);
@@ -366,7 +452,7 @@ function Globe({
           return (
             <group key={city.name}>
               <mesh position={position}>
-                <sphereGeometry args={[0.015, 16, 16]} />
+                <sphereGeometry args={[0.015, citySegments, citySegments]} />
                 <meshBasicMaterial color="#00FFFF" />
               </mesh>
               <CityLabel
@@ -378,7 +464,7 @@ function Globe({
           );
         })}
       </group>
-    </>
+    </group>
   );
 }
 
@@ -426,35 +512,224 @@ export default function GlobeApp({
   totalFlightTime,
 }) {
   const [progress, setProgress] = useState(0);
+  const [isUserScrubbing, setIsUserScrubbing] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const animationRef = useRef();
+  const lastTimestampRef = useRef();
+  // Set performance mode to true by default for best performance
+  const [performanceMode] = useState(true);
+
+  // Animation effect
+  useEffect(() => {
+    let animationId;
+
+    // Animation duration logic (in seconds)
+    const MIN_ANIMATION_DURATION = 10;
+    const MAX_ANIMATION_DURATION = 15;
+    const SHORT_FLIGHT = 120; // 2 hours in minutes
+    const LONG_FLIGHT = 480; // 8 hours in minutes
+
+    // Map totalFlightTime to animation duration
+    let animationDuration = MIN_ANIMATION_DURATION;
+    if (totalFlightTime > SHORT_FLIGHT) {
+      // Linear interpolation between min and max
+      const t = Math.min(
+        1,
+        (totalFlightTime - SHORT_FLIGHT) / (LONG_FLIGHT - SHORT_FLIGHT)
+      );
+      animationDuration =
+        MIN_ANIMATION_DURATION +
+        (MAX_ANIMATION_DURATION - MIN_ANIMATION_DURATION) * t;
+    }
+
+    function animate(timestamp) {
+      if (!lastTimestampRef.current) lastTimestampRef.current = timestamp;
+      const elapsed = (timestamp - lastTimestampRef.current) / 1000; // seconds
+      lastTimestampRef.current = timestamp;
+      setProgress((prev) => {
+        let next = prev + elapsed / animationDuration;
+        if (next >= 1) {
+          cancelAnimationFrame(animationId);
+          setIsPlaying(false);
+          return 1;
+        }
+        return next;
+      });
+      animationId = requestAnimationFrame(animate);
+    }
+
+    if (isPlaying && pointA && pointB && totalFlightTime > 0) {
+      animationId = requestAnimationFrame(animate);
+    }
+    return () => {
+      if (animationId) cancelAnimationFrame(animationId);
+      lastTimestampRef.current = null;
+    };
+  }, [isPlaying, isUserScrubbing, totalFlightTime, pointA, pointB]);
+
+  // Handlers for slider interaction
+  const handleSliderChange = (e) => {
+    setProgress(parseFloat(e.target.value));
+  };
+
+  const handleSliderStart = () => setIsUserScrubbing(true);
+
+  const handleSliderEnd = () => {
+    setIsUserScrubbing(false);
+    // If we were at the end and now user moved back, enable play again
+    if (progress < 0.99 && !isPlaying) {
+      setIsPlaying(true);
+    }
+  };
+
+  // Play/Pause toggle with enhanced behavior
+  const handlePlayPause = () => {
+    const newPlayingState = !isPlaying;
+    setIsPlaying(newPlayingState);
+
+    // If resuming from end, start from beginning
+    if (newPlayingState && progress >= 0.99) {
+      setProgress(0);
+    }
+  };
+
+  // Reset progress to 0 when starting from beginning
+  useEffect(() => {
+    if (isPlaying && progress === 1) {
+      setProgress(0);
+    }
+  }, [isPlaying, progress]);
+
+  // Auto-play when route is set
+  useEffect(() => {
+    if (pointA && pointB) {
+      setProgress(0); // Reset progress to start
+      setIsPlaying(true); // Auto-start playback
+    }
+  }, [pointA, pointB]);
 
   return (
     <ErrorBoundary>
       <div style={{ width: "100%", height: "100%", position: "relative" }}>
-        {/* Progress bar outside the Canvas */}
+        {/* Progress bar with play/pause button outside the Canvas */}
         <div
           style={{
             position: "absolute",
             top: "20px",
             left: "50%",
             transform: "translateX(-50%)",
-            width: "80%",
+            width: "38%",
             zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(10px)",
+            borderRadius: "24px",
+            padding: "8px 14px",
+            border: "0.5px solid rgba(0, 170, 255, 0.25)",
+            boxShadow:
+              "0 4px 16px rgba(0, 0, 0, 0.3), 0 0 4px rgba(0, 120, 255, 0.1)",
           }}
         >
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={progress}
-            onChange={(e) => setProgress(parseFloat(e.target.value))}
+          <div
+            onClick={handlePlayPause}
             style={{
-              width: "100%",
-              backgroundColor: "rgba(255, 255, 255, 0.2)",
-              borderRadius: "5px",
-              padding: "5px",
+              background: isPlaying
+                ? "rgba(255, 77, 79, 0.75)"
+                : "rgba(0, 170, 255, 0.75)",
+              border: "none",
+              borderRadius: "50%",
+              width: "28px",
+              height: "28px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              cursor: "pointer",
+              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.3)",
+              transition: "all 0.2s ease",
+              outline: "none",
+              flexShrink: 0,
             }}
-          />
+            aria-label={isPlaying ? "Pause animation" : "Play animation"}
+          >
+            {isPlaying ? (
+              <PauseOutlined style={{ color: "white", fontSize: "12px" }} />
+            ) : (
+              <CaretRightOutlined
+                style={{ color: "white", fontSize: "12px" }}
+              />
+            )}
+          </div>
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "22px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                left: "0",
+                height: "2px",
+                width: `${progress * 100}%`,
+                background: "linear-gradient(90deg, #1890ff, #00AAFF)",
+                borderRadius: "2px",
+                zIndex: 1,
+                boxShadow: "0 0 4px rgba(0, 170, 255, 0.7)",
+              }}
+            />
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.001"
+              value={progress}
+              onChange={handleSliderChange}
+              onMouseDown={handleSliderStart}
+              onMouseUp={handleSliderEnd}
+              onTouchStart={handleSliderStart}
+              onTouchEnd={handleSliderEnd}
+              style={{
+                width: "100%",
+                opacity: "0",
+                position: "absolute",
+                zIndex: 2,
+                cursor: "pointer",
+                height: "100%",
+                margin: "0",
+                padding: "0",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: "0",
+                height: "2px",
+                width: "100%",
+                background: "rgba(255, 255, 255, 0.1)",
+                borderRadius: "2px",
+                zIndex: 0,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: `${progress * 100}%`,
+                transform: "translateX(-50%)",
+                width: "8px",
+                height: "8px",
+                borderRadius: "50%",
+                background: "#1890ff",
+                boxShadow: "0 0 5px rgba(24, 144, 255, 0.9)",
+                zIndex: 3,
+                pointerEvents: "none",
+              }}
+            />
+          </div>
         </div>
 
         <div style={{ width: "100%", height: "100%", background: "black" }}>
@@ -469,9 +744,10 @@ export default function GlobeApp({
                 pointA={pointA}
                 pointB={pointB}
                 departureTime={departureTime}
-                totalFlightTime={totalFlightTime}
+                totalFlightTime={totalFlightTime || 120}
                 progress={progress}
                 onProgressChange={setProgress}
+                performanceMode={performanceMode}
               />
               <OrbitControls
                 enablePan={false}
@@ -481,6 +757,7 @@ export default function GlobeApp({
                 zoomSpeed={0.8}
                 minDistance={1.5}
                 maxDistance={10}
+                target={[0, EARTH_Y_OFFSET, 0]}
               />
             </Suspense>
           </Canvas>
